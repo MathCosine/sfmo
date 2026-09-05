@@ -53,7 +53,13 @@ jobs:
         if: vars.CUSTOM_DOMAIN != ''
         run: echo "${{ vars.CUSTOM_DOMAIN }}" > dist/CNAME
 
+      # enablement: turns Pages on for the repo if it is not already, so a
+      # fresh clone of this repo deploys without a manual settings visit.
+      # If the token lacks permission, flip it by hand: Settings -> Pages ->
+      # Source -> GitHub Actions.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

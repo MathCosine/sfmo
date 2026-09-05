@@ -1,0 +1,363 @@
+/* ==========================================================================
+   Page shell, water column, nav, footer
+   ========================================================================== */
+
+.shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-x: clip;
+  /* The descent. Scrolling the page is descending the water column. */
+  background: linear-gradient(
+    180deg,
+    var(--surface) 0%,
+    var(--surface) 8%,
+    var(--shallow) 30%,
+    var(--mid) 58%,
+    var(--deep) 82%,
+    var(--abyss) 100%
+  );
+}
+
+/* Marine snow — a faint particulate texture so large fields of blue are not
+   dead flat. Two offset dot grids, deliberately not aligned. */
+.shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.55) 0.9px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.35) 0.7px, transparent 1px);
+  background-size: 73px 91px, 127px 59px;
+  background-position: 0 0, 31px 17px;
+}
+
+.shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+main {
+  flex: 1;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.wrap--narrow {
+  max-width: 760px;
+}
+
+.section {
+  padding-block: clamp(3rem, 7vw, 5.5rem);
+}
+
+.section--tight {
+  padding-block: clamp(2rem, 4.5vw, 3rem);
+}
+
+/* --------------------------------------------------------------------------
+   Navigation
+   -------------------------------------------------------------------------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(9px) saturate(1.2);
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 62px;
+  padding-block: 0.5rem;
+}
+
+.nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-right: auto;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.nav__mark {
+  flex: none;
+  color: var(--ink);
+}
+
+.nav__wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.nav__wordmark b {
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.nav__wordmark span {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.nav__link {
+  position: relative;
+  padding: 0.45rem 0.7rem;
+  font-family: var(--font-pixel);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  border: 2px solid transparent;
+}
+
+.nav__link:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--sub) 26%, transparent);
+}
+
+.nav__link[aria-current='page'] {
+  color: var(--on-sub);
+  border-color: var(--ink);
+  background: var(--sub);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav__icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.nav__icon-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.nav__icon-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.nav__toggle {
+  display: none;
+}
+
+@media (max-width: 940px) {
+  .nav__toggle {
+    display: grid;
+  }
+
+  .nav__links {
+    position: fixed;
+    inset: 62px 0 auto 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.5rem var(--gutter) 1.1rem;
+    background: var(--surface);
+    border-bottom: var(--border);
+    box-shadow: 0 10px 0 -6px rgba(10, 43, 63, 0.25);
+  }
+
+  .nav__links[data-open='false'] {
+    display: none;
+  }
+
+  .nav__link {
+    padding: 0.85rem 0.6rem;
+    font-size: 0.78rem;
+    border-bottom: 1px dashed var(--ink-faint);
+  }
+
+  .nav__link[aria-current='page'] {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 620px) {
+  /* Four controls plus a wordmark is too much for a phone bar; the
+     subtitle is the least load-bearing thing on it. */
+  .nav__wordmark span {
+    display: none;
+  }
+
+  .nav__actions {
+    gap: 0.35rem;
+  }
+
+  .nav__actions .btn {
+    padding-inline: 0.65rem;
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav__wordmark {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Footer — the sea floor
+   -------------------------------------------------------------------------- */
+
+.footer {
+  position: relative;
+  margin-top: auto;
+  padding-block: 3rem 2rem;
+  color: #dff1fa;
+  background: var(--trench);
+  border-top: 3px solid var(--ink);
+}
+
+:root[data-theme='dark'] .footer {
+  border-top-color: var(--ink-faint);
+}
+
+.footer a {
+  color: #a9dcf2;
+}
+
+.footer a:hover {
+  color: var(--sub);
+}
+
+.footer__grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 2.2rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 1.6rem;
+  }
+}
+
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.footer__title {
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+
+.footer__blurb {
+  max-width: 34ch;
+  margin-top: 0.6rem;
+  font-size: 0.92rem;
+  color: #b9d9e8;
+}
+
+.footer__heading {
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7fb4cc;
+  margin-bottom: 0.7rem;
+}
+
+.footer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  padding: 0;
+  font-size: 0.92rem;
+}
+
+.footer__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.4rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2.4rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.8rem;
+  color: #8fb8ca;
+}
+
+/* The sea floor rises into the section above the footer. */
+.footer__wave {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  pointer-events: none;
+}
+
+.footer__social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.1rem;
+}
+
+.footer__social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #dff1fa;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+}
+
+.footer__social-btn:hover {
+  color: #0a2b3f;
+  background: var(--sub);
+  border-color: var(--sub);
+}

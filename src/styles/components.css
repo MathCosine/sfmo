@@ -1,0 +1,537 @@
+/* ==========================================================================
+   Components — hard borders, offset shadows, pixel labels
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 0.72rem 1.15rem;
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  color: var(--ink);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.btn--primary {
+  color: var(--on-sub);
+  background: var(--sub);
+}
+
+.btn--primary:hover:not(:disabled) {
+  color: var(--on-sub);
+  background: #ffc849;
+}
+
+.btn--deep {
+  color: var(--on-fill);
+  background: var(--btn-deep-bg);
+}
+
+.btn--deep:hover:not(:disabled) {
+  color: var(--on-fill);
+  background: var(--btn-deep-bg-hover);
+}
+
+.btn--kelp {
+  color: var(--on-fill);
+  background: var(--btn-kelp-bg);
+}
+
+.btn--kelp:hover:not(:disabled) {
+  color: var(--on-fill);
+  background: var(--btn-kelp-bg-hover);
+}
+
+.btn--lg {
+  padding: 0.95rem 1.5rem;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+}
+
+.btn--lg:hover:not(:disabled) {
+  box-shadow: var(--shadow-lg);
+}
+
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   Cards & panels
+   -------------------------------------------------------------------------- */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.4rem;
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.card--warm {
+  background: var(--paper-warm);
+}
+
+.card--link {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.card--link:hover {
+  color: inherit;
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card__eyebrow {
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lagoon-deep);
+  margin-bottom: 0.5rem;
+}
+
+.card__title {
+  font-family: var(--font-pixel);
+  font-size: 0.98rem;
+  text-transform: uppercase;
+  margin-bottom: 0.55rem;
+}
+
+.card__body {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.card__foot {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+/* A panel is a card that spans a whole section. */
+.panel {
+  padding: clamp(1.4rem, 3.5vw, 2.4rem);
+  background: var(--paper);
+  border: var(--border-thick);
+  box-shadow: var(--shadow-lg);
+}
+
+.grid {
+  display: grid;
+  gap: 1.2rem;
+}
+
+/* Genuinely two-up: auto-fit would let a fourth card orphan onto its own row. */
+.grid--2 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 760px) {
+  .grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.grid--4 {
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+}
+
+/* --------------------------------------------------------------------------
+   Badges & tags
+   -------------------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.6rem;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+.badge--sub {
+  color: var(--on-sub);
+  background: var(--sub);
+}
+
+.badge--kelp {
+  color: var(--on-fill);
+  background: var(--btn-kelp-bg);
+}
+
+.badge--coral {
+  color: var(--on-fill);
+  background: var(--badge-coral-bg);
+}
+
+.badge--muted {
+  color: var(--ink-soft);
+  background: transparent;
+  border-style: dashed;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--mid) 30%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 999px;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* --------------------------------------------------------------------------
+   Section headings
+   -------------------------------------------------------------------------- */
+
+.section-head {
+  max-width: 62ch;
+  margin-bottom: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.section-head--center {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 0;
+  border-top: 3px solid var(--sub);
+}
+
+.section-head--center .eyebrow::before {
+  display: none;
+}
+
+.lede {
+  margin-top: 0.8rem;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Pixel wave divider
+   -------------------------------------------------------------------------- */
+
+.pixel-wave {
+  display: block;
+  width: 100%;
+  height: 30px;
+}
+
+.pixel-wave--flip {
+  transform: scaleY(-1);
+}
+
+/* --------------------------------------------------------------------------
+   Stat blocks
+   -------------------------------------------------------------------------- */
+
+.stat {
+  padding: 1.2rem 1.1rem;
+  text-align: center;
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.stat__value {
+  font-family: var(--font-pixel);
+  font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+  line-height: 1;
+  color: var(--lagoon-deep);
+}
+
+.stat__label {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Notices
+   -------------------------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 1rem 1.15rem;
+  background: var(--paper-warm);
+  border: var(--border);
+  border-left-width: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.notice--info {
+  border-left-color: var(--lagoon);
+}
+
+.notice--warn {
+  border-left-color: var(--coral);
+}
+
+.notice--ok {
+  border-left-color: var(--kelp-deep);
+}
+
+.notice__title {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+.notice__body {
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field__label {
+  font-family: var(--font-pixel);
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.field__label .req {
+  color: var(--coral);
+}
+
+.field__hint {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.98rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 0;
+  transition: box-shadow 0.12s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background: color-mix(in srgb, var(--mid) 20%, var(--paper));
+  cursor: not-allowed;
+}
+
+.textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.field-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.checkbox {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.checkbox input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  accent-color: var(--lagoon-deep);
+}
+
+/* --------------------------------------------------------------------------
+   Tables (staff portal)
+   -------------------------------------------------------------------------- */
+
+.table-scroll {
+  overflow-x: auto;
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  background: var(--paper);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  padding: 0.65rem 0.8rem;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--on-sub);
+  background: var(--sub);
+  border-bottom: var(--border);
+}
+
+.table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  vertical-align: top;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--mid) 18%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Bubbles — decorative, motion-safe only
+   -------------------------------------------------------------------------- */
+
+.bubbles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -40px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  animation: rise linear infinite;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(-104vh) translateX(18px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubbles {
+    display: none;
+  }
+}

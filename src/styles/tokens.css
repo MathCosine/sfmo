@@ -1,0 +1,95 @@
+/* ==========================================================================
+   SFMO design tokens — "Under the Sea", SFMO 2027
+   --------------------------------------------------------------------------
+   The palette is a descent: the page background runs from surface light to
+   deep water, so scrolling down the site is scrolling down the water column.
+   Ink borders are hard and unblurred, like a printed zine — no soft shadows.
+   ========================================================================== */
+
+:root {
+  /* --- Water column ----------------------------------------------------- */
+  --surface: #e4f3fb;
+  --shallow: #c9e7f6;
+  --mid: #9ed3ea;
+  --deep: #4e93b5;
+  --abyss: #12455f;
+  --trench: #0a2c40;
+
+  /* --- Ink & paper ------------------------------------------------------ */
+  --ink: #0a2b3f;
+  --ink-soft: #3d6377;
+  --ink-faint: #6f92a3;
+  --paper: #fbfdfe;
+  --paper-warm: #fdf8ec;
+
+  /* --- Accents ---------------------------------------------------------- */
+  --sub: #f2b52c;        /* submarine brass yellow */
+  --sub-deep: #d1930f;
+  --kelp: #5f9e57;       /* seaweed green */
+  --kelp-deep: #3f7a3a;
+  --coral: #e2624a;      /* warnings, "closed" states */
+  --lagoon: #1c7fa0;     /* primary interactive blue */
+  --lagoon-deep: #12586f;
+
+  /* --- Filled surfaces --------------------------------------------------
+     Text drawn on a saturated fill must stay legible in BOTH themes, so
+     these do not flip. --ink does flip, so never pair it with a fill. */
+  --on-sub: #0a2b3f;
+  --on-fill: #f4fbfe;
+  --btn-deep-bg: #12586f;
+  --btn-deep-bg-hover: #1c7fa0;
+  --btn-kelp-bg: #3f7a3a;
+  --btn-kelp-bg-hover: #5f9e57;
+  --badge-coral-bg: #cf4a30;
+
+  /* --- Type ------------------------------------------------------------- */
+  --font-pixel: 'Silkscreen', 'Courier New', monospace;
+  --font-body: 'Nunito', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* --- Structure -------------------------------------------------------- */
+  --border: 2px solid var(--ink);
+  --border-thick: 3px solid var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-lg: 7px 7px 0 var(--ink);
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --radius: 4px;
+
+  --page-max: 1120px;
+  --gutter: clamp(1.1rem, 4vw, 2.5rem);
+
+  color-scheme: light;
+}
+
+/* "Deep dive" — the night-dive variant of the same water column. */
+:root[data-theme='dark'] {
+  --surface: #0e3346;
+  --shallow: #0b2b3d;
+  --mid: #0a2333;
+  --deep: #071b28;
+  --abyss: #05131d;
+  --trench: #030c13;
+
+  --ink: #d5ecf7;
+  --ink-soft: #9dc0d2;
+  --ink-faint: #6d8fa2;
+  --paper: #10394d;
+  --paper-warm: #123c50;
+
+  --sub: #ffc849;
+  --sub-deep: #f2b52c;
+  --kelp: #7cbb73;
+  --kelp-deep: #5f9e57;
+  --coral: #ff8064;
+  --lagoon: #62c3e3;
+  --lagoon-deep: #3ba7cb;
+
+  /* Fills stay dark enough for --on-fill text; --on-sub is unchanged. */
+  --btn-deep-bg: #17708f;
+  --btn-deep-bg-hover: #1f8cb0;
+  --btn-kelp-bg: #40803a;
+  --btn-kelp-bg-hover: #4f9448;
+  --badge-coral-bg: #c04227;
+
+  color-scheme: dark;
+}

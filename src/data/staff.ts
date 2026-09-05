@@ -46,8 +46,7 @@ export const staff: StaffMember[] = [
     boardTitle: 'Head of Academy',
     roles: ['Head of Academy'],
     isBoard: true,
-    photoPosition: '50% 20%',
-    photoContain: true,
+    photoPosition: '50% 25%',
     bio: "Alexander genuinely loves math, and — more unusually — he genuinely loves teaching it. He has that rare gift for making a hard idea feel inevitable: explaining something in a way that makes you wonder how you didn't see it before. His problems are fair, carefully crafted, and rewarding for students who put in the work. He's also passionate about broadening access to competitive math, which is exactly the kind of person SFMO wants building it.",
   },
   {

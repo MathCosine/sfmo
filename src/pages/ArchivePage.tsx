@@ -1,5 +1,6 @@
 import { ExternalIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
+import { SponsorPlate } from '../components/SponsorPlate';
 import { pastEvents, type PastEvent } from '../data/archive';
 import { advancedResources, problemSets, resources } from '../data/resources';
 
@@ -119,9 +120,7 @@ function EventSection({ event }: { event: PastEvent }) {
           <h3 className="dive__subhead">{event.name} Sponsors</h3>
           <ul className="sponsors">
             {event.sponsors.map((sponsor) => (
-              <li className="sponsors__item" key={sponsor}>
-                {sponsor}
-              </li>
+              <SponsorPlate sponsor={sponsor} key={sponsor.name} />
             ))}
           </ul>
         </div>

@@ -7,17 +7,23 @@ connected).
 
 ---
 
-## 1. Turn on GitHub Pages
+## 1. Turn on GitHub Pages  ← do this first
 
-One-time, in this repository:
+**This is the one step that cannot be automated.** The Actions token is not
+allowed to create a Pages site, so a repo admin has to flip the switch once:
 
 1. **Settings → Pages**
 2. Under **Build and deployment → Source**, choose **GitHub Actions**.
    (Not "Deploy from a branch" — the workflow in
    `.github/workflows/deploy.yml` publishes the built site.)
-3. Push to `main`. The workflow builds and deploys automatically.
+3. **Actions → Deploy to GitHub Pages → Run workflow**, or just push to
+   `main`. It builds and deploys in about a minute.
 
 The site lands at `https://mathcosine.github.io/sfmo/`.
+
+Until this is done, every run fails at the `configure-pages` step with
+*"Get Pages site failed … verify that the repository has Pages enabled"*.
+The build itself succeeds — only the publish step is blocked.
 
 ### Cost
 

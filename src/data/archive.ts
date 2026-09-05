@@ -5,6 +5,12 @@ export type DivisionEntry = { name: string; detail: string };
 export type RoundEntry = { name: string; detail: string; meta?: string };
 export type FactEntry = { label: string; value: string };
 
+/**
+ * A sponsor renders as a typeset plate until a logo file exists, at which
+ * point the logo takes over. `logo` is a filename in public/sponsors/.
+ */
+export type Sponsor = { name: string; logo?: string; url?: string };
+
 export type PastEvent = {
   id: string;
   code: string;
@@ -23,7 +29,7 @@ export type PastEvent = {
   facts?: FactEntry[];
   testimonial?: { quote: string; attribution: string };
   chips?: string[];
-  sponsors?: string[];
+  sponsors?: Sponsor[];
 };
 
 export const pastEvents: PastEvent[] = [
@@ -114,7 +120,10 @@ export const pastEvents: PastEvent[] = [
         detail: 'Math-bowl style single-elimination matches',
       },
     ],
-    sponsors: ['San Francisco Math Academy', 'thomas.tidy'],
+    sponsors: [
+      { name: 'San Francisco Math Academy', url: 'https://sfmathacademy.replit.app/' },
+      { name: 'thomas.tidy' },
+    ],
   },
   {
     id: 'sfmo-2026',
@@ -132,12 +141,12 @@ export const pastEvents: PastEvent[] = [
     ],
     chips: ['Inaugural Edition', 'Online Format', 'Multi-Round Competition'],
     sponsors: [
-      'Art of Problem Solving',
-      'AwesomeMath',
-      'Wolfram',
-      'MathGauss',
-      'ARETEEM Institute',
-      'Leading Aces Academy',
+      { name: 'Art of Problem Solving', url: 'https://artofproblemsolving.com/' },
+      { name: 'AwesomeMath', url: 'https://www.awesomemath.org/' },
+      { name: 'Wolfram', url: 'https://www.wolfram.com/' },
+      { name: 'MathGauss' },
+      { name: 'ARETEEM Institute' },
+      { name: 'Leading Aces Academy' },
     ],
   },
 ];

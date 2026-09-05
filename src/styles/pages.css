@@ -892,12 +892,33 @@
 }
 
 .sponsors__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
   padding: 0.7rem 1rem;
   font-weight: 700;
   font-size: 0.9rem;
   background: var(--paper-warm);
   border: var(--border);
   box-shadow: var(--shadow-sm);
+}
+
+.sponsors__link {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sponsors__link:hover {
+  color: var(--lagoon-deep);
+  text-decoration: underline;
+}
+
+.sponsors__logo {
+  max-height: 40px;
+  width: auto;
 }
 
 .resource-grid {

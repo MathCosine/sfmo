@@ -2,12 +2,16 @@ import { Link } from 'react-router-dom';
 import { ArrowIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { WorldMap } from '../components/WorldMap';
-import { communityStats, participantCountries } from '../data/competitions';
+import {
+  communityStats,
+  participantCountries,
+  participantCountryWord,
+} from '../data/competitions';
 import { boardMembers, contributors } from '../data/staff';
 import { asset } from '../lib/asset';
 import { links } from '../lib/config';
 
-const PRINCIPLES = [
+const principles = (countryWord: string) => [
   {
     title: 'Free, always',
     body: 'Every contest we have run has been free to enter. Cost should never be the reason a student does not sit a competition, so we fund prizes through our Academy instead of entry fees.',
@@ -18,7 +22,7 @@ const PRINCIPLES = [
   },
   {
     title: 'Open to anywhere',
-    body: 'Competitors have written our contests from ten countries across four continents. Our online events have no geographic requirement and never will.',
+    body: `Competitors have written our contests from ${countryWord} countries across four continents. Our online events have no geographic requirement and never will.`,
   },
   {
     title: 'Built, not bought',
@@ -33,7 +37,7 @@ export function AboutPage() {
     <>
       <SeoHead
         title="About — San Francisco Math Initiative"
-        description="Our mission, our team, and the community of problem solvers from ten countries who have joined our contests."
+        description={`Our mission, our team, and the community of problem solvers from ${participantCountryWord} countries who have joined our contests.`}
       />
 
       <section className="page-head">
@@ -127,7 +131,7 @@ export function AboutPage() {
             <h2>Four things we do not compromise on</h2>
           </div>
           <div className="grid grid--2">
-            {PRINCIPLES.map((principle, index) => (
+            {principles(participantCountryWord).map((principle, index) => (
               <article className="card card--warm principle" key={principle.title}>
                 <span className="principle__number pixel">{String(index + 1).padStart(2, '0')}</span>
                 <h3 className="card__title">{principle.title}</h3>

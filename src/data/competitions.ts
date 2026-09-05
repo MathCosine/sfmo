@@ -60,7 +60,24 @@ export const participantCountries: ParticipantCountry[] = [
   { label: 'India', mapName: 'India' },
   { label: 'Philippines', mapName: 'Philippines' },
   { label: 'Canada', mapName: 'Canada' },
+  { label: 'Egypt', mapName: 'Egypt' },
 ];
+
+/**
+ * The count was previously written out by hand in five places and drifted.
+ * Derive it instead, and spell it for prose — anything past the table falls
+ * back to the numeral rather than guessing.
+ */
+export const participantCountryCount = participantCountries.length;
+
+const NUMBER_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
+  'seventeen', 'eighteen', 'nineteen', 'twenty',
+];
+
+export const participantCountryWord =
+  NUMBER_WORDS[participantCountryCount] ?? String(participantCountryCount);
 
 export const communityStats = [
   {
@@ -74,8 +91,8 @@ export const communityStats = [
     detail: 'Celebrating curiosity, collaboration, and excellent mathematics.',
   },
   {
-    value: '10',
+    value: String(participantCountries.length),
     label: 'countries represented',
-    detail: 'Our contest community spans continents.',
+    detail: 'Our contest community spans four continents.',
   },
 ];

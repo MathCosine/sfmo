@@ -54,7 +54,7 @@ const ROUTES: RouteMeta[] = [
     path: 'about',
     title: 'About — San Francisco Math Initiative',
     description:
-      'Our mission, our team, and the community of problem solvers from ten countries who have joined our contests.',
+      'Our mission, our team, and the community of problem solvers around the world who have joined our contests.',
     priority: '0.8',
   },
   {

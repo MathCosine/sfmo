@@ -5,7 +5,7 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon, ExternalIcon } from '../components/Icons';
 import { PixelWave } from '../components/PixelWave';
 import { SeoHead } from '../components/SeoHead';
-import { communityStats, competitions } from '../data/competitions';
+import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { asset } from '../lib/asset';
 import { faq, links, rounds, sfmo2027 } from '../lib/config';
 
@@ -26,7 +26,7 @@ const EXPLORE = [
     to: '/about',
     eyebrow: 'Who we are',
     title: 'About SFMI',
-    body: 'Our mission, the students who run it, and the ten countries our competitors have written in from.',
+    body: `Our mission, the students who run it, and the ${participantCountryWord} countries our competitors have written in from.`,
   },
   {
     to: '/initiatives',

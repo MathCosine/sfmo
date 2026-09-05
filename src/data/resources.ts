@@ -51,13 +51,15 @@ export const problemSets: ProblemSet[] = [
   {
     title: 'San Francisco Math Open 2026 Problems',
     description: 'Download official problem sets from the inaugural San Francisco Math Open.',
-    href: null,
+    href: 'https://drive.google.com/file/d/1KmMq9w-4u3ETiwx3ryirkAvgiuDPgoeJ/view',
     actionLabel: 'Download PDF',
   },
   {
     title: 'San Francisco Math Open 2026 Shortlist',
     description: "Check out the shortlisted problems for this year's competition!",
-    href: null,
+    // NOTE: this is currently the same Drive file as the problem set above —
+    // the two links given to us were identical. Needs the real shortlist URL.
+    href: 'https://drive.google.com/file/d/1KmMq9w-4u3ETiwx3ryirkAvgiuDPgoeJ/view',
     actionLabel: 'View Shortlist',
   },
   {

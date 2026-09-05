@@ -103,9 +103,14 @@ export function TeamPage() {
               <p className="eyebrow">Join us</p>
               <h2>Want to help write SFMO 2027?</h2>
               <p className="lede">
-                We are always looking for problem writers, graders, and volunteers. Say hello in the
-                Discord or send us an email — no credentials required, just enthusiasm and a good
-                problem.
+                We are always looking for problem writers, graders, and volunteers — but be warned
+                that the application is rigorous. Expect a demanding written screening: original
+                problems of your own, full solutions, and a review of your mathematical taste as
+                much as your ability. We keep the bar high because the problem sets depend on it.
+              </p>
+              <p className="lede">
+                If that sounds like your kind of thing, start a conversation in the Discord or send
+                us an email and we will tell you what the current round involves.
               </p>
             </div>
             <div className="btn-row">

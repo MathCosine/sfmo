@@ -1,7 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { AboutPage } from './pages/AboutPage';
 import { ArchivePage } from './pages/ArchivePage';
 import { HomePage } from './pages/HomePage';
 import { InitiativesPage } from './pages/InitiativesPage';
@@ -9,9 +8,13 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { TeamPage } from './pages/TeamPage';
 
 /**
- * The two database-backed routes are split out so the Supabase SDK is not
- * downloaded by someone who only came to read about the contest.
+ * Split out of the main bundle: the two database-backed routes (so the
+ * Supabase SDK is not downloaded by someone who only came to read about the
+ * contest) and About (which carries ~115 KB of pre-projected map geometry).
  */
+const AboutPage = lazy(() =>
+  import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })),
+);
 const RegisterPage = lazy(() =>
   import('./pages/RegisterPage').then((module) => ({ default: module.RegisterPage })),
 );
@@ -44,7 +47,14 @@ export function App() {
               </Suspense>
             }
           />
-          <Route path="about" element={<AboutPage />} />
+          <Route
+            path="about"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <AboutPage />
+              </Suspense>
+            }
+          />
           <Route path="initiatives" element={<InitiativesPage />} />
           <Route path="archive" element={<ArchivePage />} />
           <Route path="team" element={<TeamPage />} />

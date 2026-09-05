@@ -107,6 +107,16 @@ function toCsv(rows: RosterRow[]): string {
   return [header.join(','), ...lines].join('\n');
 }
 
+/** Unique, order-preserving, blank-free. */
+function uniq(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) seen.add(trimmed.toLowerCase());
+  }
+  return [...seen];
+}
+
 function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -189,6 +199,7 @@ function Dashboard({ session }: { session: Session }) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -274,6 +285,84 @@ function Dashboard({ session }: { session: Session }) {
     setSettings({ ...settings, registration_open: next });
   }
 
+  /**
+   * Clipboard writes need a user gesture and can still be refused (permissions,
+   * insecure context), so fall back to a prompt the user can copy out of by
+   * hand rather than silently doing nothing.
+   */
+  async function copy(label: string, values: string[]) {
+    const text = values.join(', ');
+    if (!text) {
+      setCopied(`No ${label.toLowerCase()} to copy`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(`Copied ${values.length} ${label.toLowerCase()}`);
+    } catch {
+      window.prompt(`Copy ${label} (${values.length}):`, text);
+      setCopied(null);
+      return;
+    }
+    window.setTimeout(() => setCopied(null), 2500);
+  }
+
+  const competitorEmails = useMemo(
+    () => uniq(filtered.flatMap((row) => row.members.map((member) => member.email))),
+    [filtered],
+  );
+  const contactEmails = useMemo(
+    () => uniq(filtered.flatMap((row) => [row.contact_email, row.coach_email])),
+    [filtered],
+  );
+
+  /** Bulk-set status on everything currently in view. */
+  async function setAllStatus(status: string) {
+    if (!supabase || filtered.length === 0) return;
+    if (!window.confirm(`Set ${filtered.length} team(s) to "${status}"? This affects only the teams currently shown.`)) {
+      return;
+    }
+    const ids = filtered.map((row) => row.id);
+    const { error: bulkError } = await supabase.from('teams').update({ status }).in('id', ids);
+    if (bulkError) {
+      setError(readErrorMessage(bulkError, 'Bulk update failed.'));
+      return;
+    }
+    setRows((current) => current.map((row) => (ids.includes(row.id) ? { ...row, status } : row)));
+  }
+
+  /** A printable check-in sheet: one line per competitor, ID first. */
+  function printCheckIn() {
+    const lines = filtered
+      .flatMap((row) =>
+        row.members.map(
+          (member) =>
+            `<tr><td class="id">${member.competitor_id}</td><td>${member.full_name}</td><td>${row.team_name}</td><td>${member.grade ?? ''}</td><td class="box"></td></tr>`,
+        ),
+      )
+      .join('');
+    const win = window.open('', '_blank');
+    if (!win) {
+      setCopied('Pop-up blocked — allow pop-ups to print');
+      return;
+    }
+    win.document.write(
+      `<!doctype html><title>SFMO 2027 check-in</title><style>
+        body{font:13px/1.4 system-ui,sans-serif;margin:28px}
+        h1{font-size:17px;margin:0 0 14px}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #333;padding:5px 7px;text-align:left}
+        th{background:#f0c000}
+        .id{font-family:ui-monospace,monospace;font-weight:700}
+        .box{width:70px}
+      </style><h1>SFMO 2027 — check-in (${filtered.length} teams)</h1>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Team</th><th>Grade</th><th>Signed in</th></tr></thead>
+      <tbody>${lines}</tbody></table>`,
+    );
+    win.document.close();
+    win.print();
+  }
+
   function downloadCsv() {
     const blob = new Blob([toCsv(filtered)], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -356,6 +445,39 @@ function Dashboard({ session }: { session: Session }) {
           </div>
         </div>
       )}
+
+      <div className="staff__tools">
+        <p className="staff__tools-label pixel">
+          Acting on {filtered.length} team{filtered.length === 1 ? '' : 's'} in view
+        </p>
+        <div className="btn-row">
+          <button type="button" className="btn" onClick={() => void copy('competitor emails', competitorEmails)}>
+            Copy competitor emails ({competitorEmails.length})
+          </button>
+          <button type="button" className="btn" onClick={() => void copy('contact emails', contactEmails)}>
+            Copy contact emails ({contactEmails.length})
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              void copy(
+                'competitor IDs',
+                filtered.flatMap((row) => row.members.map((member) => member.competitor_id)),
+              )
+            }
+          >
+            Copy competitor IDs
+          </button>
+          <button type="button" className="btn" onClick={printCheckIn}>
+            Print check-in sheet
+          </button>
+          <button type="button" className="btn btn--kelp" onClick={() => void setAllStatus('confirmed')}>
+            Confirm all in view
+          </button>
+        </div>
+        {copied && <p className="staff__copied mono">{copied}</p>}
+      </div>
 
       <div className="staff__filters">
         <div className="field">

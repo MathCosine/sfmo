@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ExternalIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { SponsorPlate } from '../components/SponsorPlate';
@@ -129,6 +130,52 @@ function EventSection({ event }: { event: PastEvent }) {
   );
 }
 
+function EventTabs() {
+  const [active, setActive] = useState(pastEvents[0].id);
+  const current = pastEvents.find((event) => event.id === active) ?? pastEvents[0];
+
+  /** Left/right arrows move between tabs, as keyboard users expect. */
+  function onKeyDown(event: React.KeyboardEvent) {
+    const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!delta) return;
+    event.preventDefault();
+    const index = pastEvents.findIndex((item) => item.id === active);
+    const next = pastEvents[(index + delta + pastEvents.length) % pastEvents.length];
+    setActive(next.id);
+    document.getElementById(`tab-${next.id}`)?.focus();
+  }
+
+  return (
+    <>
+      <div className="tabs" role="tablist" aria-label="Past events" onKeyDown={onKeyDown}>
+        {pastEvents.map((event) => (
+          <button
+            key={event.id}
+            id={`tab-${event.id}`}
+            type="button"
+            role="tab"
+            className="tabs__tab"
+            aria-selected={event.id === active}
+            aria-controls={`panel-${event.id}`}
+            tabIndex={event.id === active ? 0 : -1}
+            onClick={() => setActive(event.id)}
+          >
+            <span className="tabs__code pixel">{event.code}</span>
+            <span className="tabs__meta">
+              <strong>{event.name}</strong>
+              <small>{event.dateLabel.replace(/^Held /, '')}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div id={`panel-${current.id}`} role="tabpanel" aria-labelledby={`tab-${current.id}`}>
+        <EventSection event={current} />
+      </div>
+    </>
+  );
+}
+
 export function ArchivePage() {
   return (
     <>
@@ -145,24 +192,16 @@ export function ArchivePage() {
             A look back at previous editions, plus problem sets and recommended resources to sharpen
             your skills.
           </p>
-          <nav className="archive-jump" aria-label="Jump to an event">
-            {pastEvents.map((event) => (
-              <a className="badge" href={`#${event.id}`} key={event.id}>
-                {event.name}
-              </a>
-            ))}
-            <a className="badge" href="#resources">
-              Resources
-            </a>
-          </nav>
+          <p className="lede archive-hint">
+            Three editions so far. Pick one — or jump straight to the{' '}
+            <a href="#resources">problem sets and resources</a>.
+          </p>
         </div>
       </section>
 
       <section className="section">
-        <div className="wrap dive-list">
-          {pastEvents.map((event) => (
-            <EventSection event={event} key={event.id} />
-          ))}
+        <div className="wrap">
+          <EventTabs />
         </div>
       </section>
 

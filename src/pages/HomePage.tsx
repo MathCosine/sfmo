@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Art } from '../components/Art';
 import { Bubbles } from '../components/Bubbles';
 import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon, ExternalIcon } from '../components/Icons';
@@ -6,29 +7,18 @@ import { PixelWave } from '../components/PixelWave';
 import { SeoHead } from '../components/SeoHead';
 import { communityStats, competitions } from '../data/competitions';
 import { asset } from '../lib/asset';
-import { links, sfmo2027 } from '../lib/config';
+import { faq, links, rounds, sfmo2027 } from '../lib/config';
 
-const DIVE_PLAN = [
-  {
-    label: 'Where',
-    title: 'In person, San Francisco',
-    body: 'After two online years, our flagship contest surfaces in the city it is named after. Venue announced with registration.',
-  },
-  {
-    label: 'When',
-    title: 'January 2027',
-    body: 'A single full day of mathematics. The exact date lands alongside registration on October 24.',
-  },
-  {
-    label: 'Who',
-    title: 'Teams of up to four',
-    body: 'Bring a school team, a club, or three friends. Every competitor gets an ID of the form 07A through 07D.',
-  },
-  {
-    label: 'Cost',
-    title: 'Free to enter',
-    body: 'Every contest we run is free. Tutoring and camp proceeds from our Academy fund the prize pool.',
-  },
+
+const DAY = [
+  { time: '08:30', title: 'Doors & check-in', detail: 'Collect your competitor IDs and find your table.' },
+  { time: '09:30', title: 'Opening ceremony', detail: 'Rules, the honour code, and how Guts actually works.' },
+  { time: '10:00', title: 'Individual round', detail: '20 problems, 90 minutes, on your own.' },
+  { time: '11:45', title: 'Team round', detail: '10 problems, 60 minutes, four heads.' },
+  { time: '12:45', title: 'Lunch', detail: 'Provided. Argue about problem 17.' },
+  { time: '13:45', title: 'Mystery Dive', detail: '60 minutes. You find out when everyone does.' },
+  { time: '15:00', title: 'Guts round', detail: '9 sets of 4, 90 minutes, live scoreboard.' },
+  { time: '16:45', title: 'Awards', detail: 'Results, prizes, and the shortlist reveal.' },
 ];
 
 const EXPLORE = [
@@ -148,24 +138,111 @@ export function HomePage() {
       </section>
 
       {/* ---------------------------------------------------------------- */}
-      <section className="section">
+      <section className="section rounds">
         <div className="wrap">
           <div className="section-head">
             <p className="eyebrow">The dive plan</p>
-            <h2>What SFMO 2027 is</h2>
+            <h2>Four rounds, one day</h2>
             <p className="lede">
-              A free, student-run math competition, back in person for the first time. Here is what
-              we can tell you now — the rest lands with registration.
+              Five hours of mathematics, split four ways. Three of them we can describe.
             </p>
           </div>
 
-          <div className="grid grid--4">
-            {DIVE_PLAN.map((item) => (
-              <article className="card" key={item.title}>
-                <p className="card__eyebrow">{item.label}</p>
-                <h3 className="card__title">{item.title}</h3>
-                <p className="card__body">{item.body}</p>
-              </article>
+          <ol className="round-list">
+            {rounds.map((round, index) => (
+              <li className={`round ${round.mystery ? 'round--mystery' : ''}`} key={round.name}>
+                <div className="round__depth" aria-hidden="true">
+                  <span className="round__code pixel">{round.code}</span>
+                  <span className="round__rule" />
+                </div>
+                <div className="round__body">
+                  <div className="round__head">
+                    <h3>{round.name}</h3>
+                    <span className="round__meta mono">
+                      {round.detail} · {round.minutes} min
+                    </span>
+                  </div>
+                  <p className="card__body">{round.blurb}</p>
+                </div>
+                <div className="round__bar" aria-hidden="true">
+                  {/* Bar length is proportional to the round's duration. */}
+                  <span style={{ height: `${(round.minutes / 90) * 100}%` }} />
+                  <small className="mono">{round.minutes}&apos;</small>
+                </div>
+                <span className="round__index pixel" aria-hidden="true">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="grid grid--2 rounds__extras">
+            <article className="card card--warm prize">
+              <Art name="treasure" className="prize__art" />
+              <div>
+                <p className="card__eyebrow">Prizes</p>
+                <h3 className="card__title">Free to enter, real prizes</h3>
+                <p className="card__body">
+                  We have put over $5,000 into past contests and none of it came from entry fees —
+                  our tutoring and summer camp fund the pool instead. The SFMO 2027 breakdown is
+                  announced with registration.
+                </p>
+              </div>
+            </article>
+            <article className="card card--warm">
+              <p className="card__eyebrow">Your ID</p>
+              <h3 className="card__title">07A through 07D</h3>
+              <p className="card__body">
+                Register and your team is assigned a number on the spot. Each member gets a letter,
+                so you compete as 07A, 07B, 07C and 07D. It goes on every answer sheet and it is how
+                we check you in on the day.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      <section className="section deep-band">
+        <PixelWave fill="var(--trench)" crest="var(--abyss)" className="deep-band__wave" />
+        <Art name="anglerfish" className="deep-band__art" />
+        <div className="wrap deep-band__inner">
+          <div>
+            <p className="eyebrow">Competition day</p>
+            <h2>How the day runs</h2>
+            <p className="deep-band__note">
+              A single full day in January. Exact times land with the venue on October 24 — this is
+              the shape of it.
+            </p>
+          </div>
+          <ol className="daylog">
+            {DAY.map((slot) => (
+              <li className="daylog__row" key={slot.time}>
+                <span className="daylog__time pixel">{slot.time}</span>
+                <span className="daylog__body">
+                  <strong>{slot.title}</strong>
+                  <span>{slot.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <PixelWave flip fill="var(--trench)" crest="var(--abyss)" className="deep-band__wave-bottom" />
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      <section className="section">
+        <div className="wrap">
+          <div className="section-head">
+            <p className="eyebrow">Before you ask</p>
+            <h2>Questions we get</h2>
+          </div>
+          <div className="faq">
+            {faq.map((item) => (
+              <details className="faq__item" key={item.q}>
+                <summary className="faq__q">{item.q}</summary>
+                <p className="faq__a">{item.a}</p>
+              </details>
             ))}
           </div>
         </div>

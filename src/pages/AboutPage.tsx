@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
+import { WorldMap } from '../components/WorldMap';
 import { communityStats, participantCountries } from '../data/competitions';
 import { boardMembers, contributors } from '../data/staff';
 import { asset } from '../lib/asset';
@@ -72,12 +73,7 @@ export function AboutPage() {
               </div>
             </div>
             <div className="mission__art">
-              <img
-                src={asset('art/seaweed.png')}
-                alt=""
-                aria-hidden="true"
-                className="mission__seaweed"
-              />
+              <img src={asset('art/submarine.png')} alt="" aria-hidden="true" className="mission__sub" />
             </div>
           </div>
         </div>
@@ -108,11 +104,16 @@ export function AboutPage() {
             </p>
           </div>
 
+          <WorldMap />
+
           <ul className="countries">
             {participantCountries.map((country) => (
-              <li className="countries__item" key={country}>
-                <span className="countries__pin" aria-hidden="true" />
-                {country}
+              <li className="countries__item" key={country.mapName}>
+                <span
+                  className={`countries__pin ${country.home ? 'countries__pin--home' : ''}`}
+                  aria-hidden="true"
+                />
+                {country.label}
               </li>
             ))}
           </ul>

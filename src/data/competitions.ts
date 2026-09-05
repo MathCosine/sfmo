@@ -40,18 +40,26 @@ export const competitions: Competition[] = [
   },
 ];
 
-/** Countries past participants have called home. */
-export const participantCountries = [
-  'USA',
-  'Uzbekistan',
-  'Kazakhstan',
-  'Indonesia',
-  'China',
-  'Montenegro',
-  'Romania',
-  'India',
-  'Philippines',
-  'Canada',
+/**
+ * Countries past participants have called home.
+ *
+ * `mapName` must match the name in src/data/worldMap.ts exactly — the two
+ * differ for a handful of countries, so it is stated rather than guessed.
+ * `home` marks where SFMO itself is run, shaded a tier darker on the map.
+ */
+export type ParticipantCountry = { label: string; mapName: string; home?: boolean };
+
+export const participantCountries: ParticipantCountry[] = [
+  { label: 'USA', mapName: 'United States of America', home: true },
+  { label: 'Uzbekistan', mapName: 'Uzbekistan' },
+  { label: 'Kazakhstan', mapName: 'Kazakhstan' },
+  { label: 'Indonesia', mapName: 'Indonesia' },
+  { label: 'China', mapName: 'China' },
+  { label: 'Montenegro', mapName: 'Montenegro' },
+  { label: 'Romania', mapName: 'Romania' },
+  { label: 'India', mapName: 'India' },
+  { label: 'Philippines', mapName: 'Philippines' },
+  { label: 'Canada', mapName: 'Canada' },
 ];
 
 export const communityStats = [

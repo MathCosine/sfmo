@@ -1247,3 +1247,445 @@
   justify-content: center;
   margin-top: 1.8rem;
 }
+
+/* --------------------------------------------------------------------------
+   Rounds — the dive profile
+   -------------------------------------------------------------------------- */
+
+.round-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.round {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 52px;
+  gap: 1.2rem;
+  align-items: center;
+  padding: 1.15rem 1.3rem;
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.round--mystery {
+  background: var(--paper-warm);
+  border-style: dashed;
+}
+
+.round__depth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.round__code {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  font-size: 1.05rem;
+  color: var(--on-sub);
+  background: var(--sub);
+  border: var(--border);
+}
+
+.round__rule {
+  flex: 1;
+  width: 0;
+  min-height: 10px;
+  border-left: 2px dashed var(--ink-faint);
+}
+
+.round__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  align-items: baseline;
+}
+
+.round__meta {
+  font-size: 0.8rem;
+  color: var(--lagoon-deep);
+}
+
+/* Bar height is proportional to the round's duration — a dive profile. */
+.round__bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  height: 58px;
+}
+
+.round__bar span {
+  width: 14px;
+  background: var(--lagoon);
+  border: 2px solid var(--ink);
+}
+
+.round__bar small {
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+}
+
+.round__index {
+  position: absolute;
+  top: -11px;
+  right: 1.1rem;
+  padding: 0.16rem 0.4rem;
+  font-size: 0.58rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+}
+
+@media (max-width: 620px) {
+  .round {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .round__bar {
+    display: none;
+  }
+}
+
+.rounds__extras {
+  margin-top: 1.6rem;
+}
+
+.prize {
+  flex-direction: row;
+  gap: 1.1rem;
+  align-items: flex-start;
+}
+
+.prize__art {
+  flex: none;
+  width: clamp(70px, 22%, 120px);
+  height: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Deep band — competition-day timeline
+   -------------------------------------------------------------------------- */
+
+.deep-band {
+  position: relative;
+  margin-block: clamp(2rem, 5vw, 3.5rem);
+  padding-block: clamp(3rem, 6vw, 4.5rem);
+  color: #e6f5fd;
+  background: var(--trench);
+}
+
+.deep-band__wave {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+}
+
+.deep-band__wave-bottom {
+  position: absolute;
+  left: 0;
+  top: 100%;
+}
+
+.deep-band__inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .deep-band__inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.deep-band .eyebrow {
+  color: #8fc7de;
+}
+
+.deep-band h2 {
+  color: var(--sub);
+}
+
+.deep-band__note {
+  max-width: 34ch;
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  color: #a9cfe1;
+}
+
+/* Sits behind the copy; removes itself entirely when the drawing is absent. */
+.deep-band__art {
+  position: absolute;
+  left: 2%;
+  bottom: 0;
+  z-index: 1;
+  width: clamp(140px, 22%, 280px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+  .deep-band__art {
+    display: none;
+  }
+}
+
+.daylog {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.daylog__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.daylog__time {
+  font-size: 0.78rem;
+  color: var(--sub);
+}
+
+.daylog__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.daylog__body span {
+  font-size: 0.87rem;
+  color: #a9cfe1;
+}
+
+/* --------------------------------------------------------------------------
+   FAQ
+   -------------------------------------------------------------------------- */
+
+.faq {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.faq__item {
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.faq__q {
+  padding: 0.95rem 1.15rem;
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.faq__q::after {
+  content: '+';
+  float: right;
+  color: var(--lagoon-deep);
+}
+
+.faq__item[open] .faq__q::after {
+  content: '\2212';
+}
+
+.faq__a {
+  padding: 0 1.15rem 1.1rem;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------------------------
+   World map
+   -------------------------------------------------------------------------- */
+
+.worldmap {
+  margin: 0 0 1.6rem;
+  padding: 1.1rem;
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.worldmap__svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Three tiers of blue: context, participant, host. */
+.worldmap__c {
+  stroke: var(--paper);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+.worldmap__c--quiet {
+  fill: color-mix(in srgb, var(--mid) 42%, var(--paper));
+}
+
+.worldmap__c--participant {
+  fill: var(--lagoon);
+}
+
+.worldmap__c--home {
+  fill: var(--abyss);
+}
+
+:root[data-theme='dark'] .worldmap__c--home {
+  fill: var(--sub);
+}
+
+.worldmap__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.3rem;
+  margin-top: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.worldmap__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.worldmap__swatch {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ink);
+}
+
+.worldmap__swatch--home {
+  background: var(--abyss);
+}
+
+:root[data-theme='dark'] .worldmap__swatch--home {
+  background: var(--sub);
+}
+
+.worldmap__swatch--participant {
+  background: var(--lagoon);
+}
+
+.worldmap__swatch--quiet {
+  background: color-mix(in srgb, var(--mid) 42%, var(--paper));
+}
+
+.countries__pin--home {
+  background: var(--abyss);
+}
+
+:root[data-theme='dark'] .countries__pin--home {
+  background: var(--sub);
+}
+
+.mission__sub {
+  width: min(100%, 260px);
+  height: auto;
+  transform: rotate(-6deg);
+}
+
+/* --------------------------------------------------------------------------
+   Archive tabs
+   -------------------------------------------------------------------------- */
+
+.archive-hint {
+  margin-top: 1rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.tabs__tab {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.tabs__tab:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.tabs__tab[aria-selected='true'] {
+  color: var(--on-sub);
+  background: var(--sub);
+  box-shadow: var(--shadow);
+}
+
+.tabs__code {
+  font-size: 0.82rem;
+}
+
+.tabs__meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.tabs__meta small {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+/* --------------------------------------------------------------------------
+   Staff toolbar
+   -------------------------------------------------------------------------- */
+
+.staff__tools {
+  padding: 1rem 1.15rem;
+  background: var(--paper-warm);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.staff__tools-label {
+  margin-bottom: 0.7rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.staff__copied {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--kelp-deep);
+}

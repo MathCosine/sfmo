@@ -7,18 +7,25 @@ import { PixelWave } from '../components/PixelWave';
 import { SeoHead } from '../components/SeoHead';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { asset } from '../lib/asset';
-import { faq, links, rounds, sfmo2027 } from '../lib/config';
+import {
+  faq,
+  links,
+  longestRoundMinutes,
+  rounds,
+  sfmo2027,
+  totalRoundMinutes,
+} from '../lib/config';
 
 
 const DAY = [
   { time: '08:30', title: 'Doors & check-in', detail: 'Collect your competitor IDs and find your table.' },
   { time: '09:30', title: 'Opening ceremony', detail: 'Rules, the honour code, and how Guts actually works.' },
-  { time: '10:00', title: 'Individual round', detail: '20 problems, 90 minutes, on your own.' },
-  { time: '11:45', title: 'Team round', detail: '10 problems, 60 minutes, four heads.' },
-  { time: '12:45', title: 'Lunch', detail: 'Provided. Argue about problem 17.' },
-  { time: '13:45', title: 'Mystery Dive', detail: '60 minutes. You find out when everyone does.' },
-  { time: '15:00', title: 'Guts round', detail: '9 sets of 4, 90 minutes, live scoreboard.' },
-  { time: '16:45', title: 'Awards', detail: 'Results, prizes, and the shortlist reveal.' },
+  { time: '10:00', title: 'Individual round', detail: '20 problems, 60 minutes, on your own.' },
+  { time: '11:15', title: 'Team round', detail: '10 problems, 45 minutes, four heads.' },
+  { time: '12:00', title: 'Lunch', detail: 'Provided. Argue about problem 17.' },
+  { time: '13:00', title: 'Mystery Dive', detail: '45 minutes. You find out when everyone does.' },
+  { time: '14:00', title: 'Guts round', detail: '9 sets of 3, 75 minutes, live scoreboard.' },
+  { time: '15:30', title: 'Awards', detail: 'Results, prizes, and the shortlist reveal.' },
 ];
 
 const EXPLORE = [
@@ -144,7 +151,8 @@ export function HomePage() {
             <p className="eyebrow">The dive plan</p>
             <h2>Four rounds, one day</h2>
             <p className="lede">
-              Five hours of mathematics, split four ways. Three of them we can describe.
+              {Math.floor(totalRoundMinutes / 60)} hours {totalRoundMinutes % 60} minutes of
+              mathematics, split four ways. Three of them we can describe.
             </p>
           </div>
 
@@ -166,7 +174,7 @@ export function HomePage() {
                 </div>
                 <div className="round__bar" aria-hidden="true">
                   {/* Bar length is proportional to the round's duration. */}
-                  <span style={{ height: `${(round.minutes / 90) * 100}%` }} />
+                  <span style={{ height: `${(round.minutes / longestRoundMinutes) * 100}%` }} />
                   <small className="mono">{round.minutes}&apos;</small>
                 </div>
                 <span className="round__index pixel" aria-hidden="true">

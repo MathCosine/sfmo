@@ -58,15 +58,15 @@ export const rounds: Round[] = [
     code: 'I',
     name: 'Individual',
     detail: '20 problems',
-    minutes: 90,
+    minutes: 60,
     blurb:
       'Short-answer problems climbing steadily in difficulty. Sit it alone — this is the round that separates the field.',
   },
   {
     code: 'G',
     name: 'Guts',
-    detail: '9 sets of 4',
-    minutes: 90,
+    detail: '9 sets of 3',
+    minutes: 75,
     blurb:
       'Sets are handed out one at a time and you only move on once the set is in. Fast, loud, and the best spectator round we run.',
   },
@@ -74,7 +74,7 @@ export const rounds: Round[] = [
     code: 'T',
     name: 'Team',
     detail: '10 problems',
-    minutes: 60,
+    minutes: 45,
     blurb:
       'Harder than the Individual round and meant to be split up. Four heads, one answer sheet, one hour.',
   },
@@ -82,12 +82,18 @@ export const rounds: Round[] = [
     code: '?',
     name: 'Mystery Dive',
     detail: 'Format revealed on the day',
-    minutes: 60,
+    minutes: 45,
     blurb:
       'Team-based, and that is all we are saying. You will find out what it is when everyone else does.',
     mystery: true,
   },
 ];
+
+/** Total time competitors spend on paper, excluding breaks and ceremonies. */
+export const totalRoundMinutes = rounds.reduce((sum, round) => sum + round.minutes, 0);
+
+/** The longest round, used to scale the dive-profile bars. */
+export const longestRoundMinutes = Math.max(...rounds.map((round) => round.minutes));
 
 /** Frequently asked questions shown on the landing page. */
 export const faq = [

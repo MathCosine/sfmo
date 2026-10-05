@@ -121,7 +121,7 @@ export const pastEvents: PastEvent[] = [
       },
     ],
     sponsors: [
-      { name: 'San Francisco Math Academy', url: 'https://sfmathacademy.replit.app/' },
+      { name: 'San Francisco Math Academy', url: 'https://sfmathacademy.com/' },
       { name: 'thomas.tidy' },
     ],
   },

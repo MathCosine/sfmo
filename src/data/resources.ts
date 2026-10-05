@@ -7,7 +7,7 @@ export type Resource = {
 export const resources: Resource[] = [
   {
     title: 'San Francisco Math Academy — 1-on-1 Tutoring & Summer Camp',
-    url: 'https://sfmathacademy.replit.app/',
+    url: 'https://sfmathacademy.com/',
     highlight: true,
   },
   {

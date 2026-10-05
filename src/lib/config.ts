@@ -16,9 +16,9 @@ export const links = {
   instagram: 'https://www.instagram.com/san_francisco_math_initiative/',
   instagramHandle: '@san_francisco_math_initiative',
   mathcloud: 'https://mathcloud.replit.app/',
-  academy: 'https://sfmathacademy.replit.app/',
-  academyTutoring: 'https://sfmathacademy.replit.app/book-tutoring',
-  academyCamp: 'https://sfmathacademy.replit.app/camp',
+  academy: 'https://sfmathacademy.com/',
+  academyTutoring: 'https://sfmathacademy.com/book-tutoring',
+  academyCamp: 'https://sfmathacademy.com/camp',
   /** Contact address shown on the registration and about pages. */
   email: 'sfmathopen@gmail.com',
 } as const;

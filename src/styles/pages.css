@@ -1689,3 +1689,147 @@
   font-size: 0.8rem;
   color: var(--kelp-deep);
 }
+
+/* --------------------------------------------------------------------------
+   Sponsor wall — one card per sponsor, sized by tier
+   -------------------------------------------------------------------------- */
+
+.sponsor-tier + .sponsor-tier {
+  margin-top: 2rem;
+}
+
+.sponsor-tier__label {
+  display: inline-block;
+  margin-bottom: 0.9rem;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--on-sub);
+  border: var(--border);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.sponsor-tier__label--gold {
+  background: var(--tier-gold);
+}
+
+.sponsor-tier__label--silver {
+  background: var(--tier-silver);
+}
+
+.sponsor-tier__label--bronze {
+  background: var(--tier-bronze);
+}
+
+/* Each tier sets the logo box its cards draw into: higher tiers get more room. */
+.sponsor-grid {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.sponsor-grid--gold {
+  --logo-h: 140px;
+  --logo-w: 380px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sponsor-grid--silver {
+  --logo-h: 110px;
+  --logo-w: 300px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.sponsor-grid--bronze {
+  --logo-h: 64px;
+  --logo-w: 200px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 300px));
+}
+
+.sponsor-card {
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--paper);
+  border: var(--border);
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sponsor-card:hover {
+  color: var(--ink);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* A fixed logo row, not a min-height: under border-box a min-height has to
+   budget for the tier stripe too, and getting that wrong let a full-height
+   logo grow its plate past a shorter neighbour's. */
+.sponsor-card__plate {
+  display: grid;
+  grid-template-rows: var(--logo-h);
+  place-items: center;
+  padding: 1.3rem 1.5rem;
+  background: var(--logo-plate);
+  border-bottom: var(--border);
+}
+
+/* A tier stripe across the top of the plate, so the tier survives a
+   screenshot that crops the label off. */
+.sponsor-card--gold .sponsor-card__plate {
+  border-top: 6px solid var(--tier-gold);
+}
+
+.sponsor-card--silver .sponsor-card__plate {
+  border-top: 6px solid var(--tier-silver);
+}
+
+.sponsor-card--bronze .sponsor-card__plate {
+  border-top: 6px solid var(--tier-bronze);
+}
+
+.sponsor-card__logo {
+  width: auto;
+  height: auto;
+  max-width: min(100%, var(--logo-w));
+  max-height: var(--logo-h);
+  object-fit: contain;
+}
+
+.sponsor-card__fallback {
+  font-weight: 800;
+  color: #0a2b3f;
+}
+
+.sponsor-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+}
+
+.sponsor-card__name {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.sponsor-card__visit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6rem;
+  color: var(--lagoon-deep);
+}
+
+.sponsors-wall__cta {
+  margin-top: 1.8rem;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+/* Archive plates that carry a logo get the same light ground. */
+.sponsors__item--logo {
+  background: var(--logo-plate);
+}

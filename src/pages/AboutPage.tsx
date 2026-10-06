@@ -14,7 +14,7 @@ import { links } from '../lib/config';
 const principles = (countryWord: string) => [
   {
     title: 'Free, always',
-    body: 'Every contest we have run has been free to enter. Cost should never be the reason a student does not sit a competition, so we fund prizes through our Academy instead of entry fees.',
+    body: 'Every contest we have run has been free to enter. Cost should never be the reason a student does not sit a competition, so prizes are funded by our sponsors and our Academy instead of entry fees.',
   },
   {
     title: 'Written by students',
@@ -64,8 +64,8 @@ export function AboutPage() {
               </p>
               <p className="mission__body">
                 What began as one online competition in 2026 has grown into three annual events, a
-                testing platform of our own, and a tutoring academy whose proceeds fund the prize
-                pool. All of it is run by {teamSize} students.
+                testing platform of our own, and a tutoring academy whose proceeds, alongside our
+                sponsors, fund the prize pool. All of it is run by {teamSize} students.
               </p>
               <div className="btn-row mission__actions">
                 <Link to="/team" className="btn btn--primary">

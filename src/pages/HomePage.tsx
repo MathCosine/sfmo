@@ -5,6 +5,7 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon, ExternalIcon } from '../components/Icons';
 import { PixelWave } from '../components/PixelWave';
 import { SeoHead } from '../components/SeoHead';
+import { SponsorWall } from '../components/SponsorWall';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { asset } from '../lib/asset';
 import {
@@ -192,8 +193,8 @@ export function HomePage() {
                 <h3 className="card__title">Free to enter, real prizes</h3>
                 <p className="card__body">
                   We have put over $5,000 into past contests and none of it came from entry fees —
-                  our tutoring and summer camp fund the pool instead. The SFMO 2027 breakdown is
-                  announced with registration.
+                  our sponsors and our tutoring and summer camp fund the pool instead. The SFMO 2027
+                  breakdown is announced with registration.
                 </p>
               </div>
             </article>
@@ -209,6 +210,8 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      <SponsorWall />
 
       {/* ---------------------------------------------------------------- */}
       <section className="section deep-band">

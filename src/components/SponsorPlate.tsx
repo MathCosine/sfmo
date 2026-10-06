@@ -24,9 +24,11 @@ export function SponsorPlate({ sponsor }: { sponsor: Sponsor }) {
     sponsor.name
   );
 
+  const itemClass = `sponsors__item${showLogo ? ' sponsors__item--logo' : ''}`;
+
   if (sponsor.url) {
     return (
-      <li className="sponsors__item">
+      <li className={itemClass}>
         <a href={sponsor.url} target="_blank" rel="noreferrer" className="sponsors__link">
           {inner}
         </a>
@@ -34,5 +36,5 @@ export function SponsorPlate({ sponsor }: { sponsor: Sponsor }) {
     );
   }
 
-  return <li className="sponsors__item">{inner}</li>;
+  return <li className={itemClass}>{inner}</li>;
 }

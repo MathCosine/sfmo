@@ -42,6 +42,14 @@
   --btn-kelp-bg-hover: #5f9e57;
   --badge-coral-bg: #cf4a30;
 
+  /* Sponsor tiers. Fixed in both themes — a tier colour is a fact about
+     the sponsor, not a theme surface — and always paired with --on-sub. */
+  --tier-gold: #e2b33c;
+  --tier-silver: #c4cdd4;
+  --tier-bronze: #cd8b55;
+  /* Logo plates stay light: brand marks are drawn for a light ground. */
+  --logo-plate: #fbfdfe;
+
   /* --- Type ------------------------------------------------------------- */
   --font-pixel: 'Silkscreen', 'Courier New', monospace;
   --font-body: 'Nunito', ui-sans-serif, system-ui, -apple-system, sans-serif;

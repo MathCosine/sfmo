@@ -99,7 +99,7 @@ export const longestRoundMinutes = Math.max(...rounds.map((round) => round.minut
 export const faq = [
   {
     q: 'How much does it cost?',
-    a: 'Nothing. Every contest we have run has been free to enter, and SFMO 2027 is no exception. Tutoring and camp proceeds from our Academy fund the prizes instead of entry fees.',
+    a: 'Nothing. Every contest we have run has been free to enter, and SFMO 2027 is no exception. Our sponsors and the proceeds from our Academy\'s tutoring and camps fund the prizes instead of entry fees.',
   },
   {
     q: 'Do I need a full team of four?',

@@ -1706,6 +1706,7 @@
   letter-spacing: 0.08em;
   color: var(--on-sub);
   border: var(--border);
+  border-radius: 6px;
   box-shadow: 2px 2px 0 var(--ink);
 }
 
@@ -1752,7 +1753,12 @@
   text-decoration: none;
   background: var(--paper);
   border: var(--border);
+  border-radius: 14px;
   box-shadow: var(--shadow);
+  /* Clips the plate and its tier stripe to the rounded corners. The offset
+     shadow is drawn outside the box, so it is not clipped and follows the
+     radius on its own. */
+  overflow: hidden;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 

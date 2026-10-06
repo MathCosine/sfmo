@@ -46,4 +46,10 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     url: 'https://artofproblemsolving.com/',
     logo: 'aops.png',
   },
+  {
+    name: '.xyz',
+    tier: 'bronze',
+    url: 'https://xyz.xyz/',
+    logo: 'xyz.png',
+  },
 ];

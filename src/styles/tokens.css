@@ -54,6 +54,11 @@
   --font-pixel: 'Silkscreen', 'Courier New', monospace;
   --font-body: 'Nunito', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* Small UI text: eyebrows, buttons, nav, badges, field labels, times.
+     The pixel face is for display sizes only — below ~1rem its 1px strokes
+     and tight counters stop reading. A monospace keeps the retro-terminal
+     feel at sizes people can actually read. */
+  --font-label: var(--font-mono);
 
   /* --- Structure -------------------------------------------------------- */
   --border: 2px solid var(--ink);

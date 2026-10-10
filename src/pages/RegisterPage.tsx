@@ -229,7 +229,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
   return (
     <form onSubmit={onSubmit} className="reg-form">
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">1 · Division</legend>
+        <legend className="reg-form__legend label">1 · Division</legend>
         <div className="division-picker" role="radiogroup" aria-label="Division">
           {(Object.keys(DIVISIONS) as Division[]).map((key) => (
             <label
@@ -244,7 +244,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
                 onChange={() => setField('division', key)}
                 required
               />
-              <span className="division-option__label pixel">{DIVISIONS[key].label}</span>
+              <span className="division-option__label label">{DIVISIONS[key].label}</span>
               <span className="division-option__detail">{DIVISIONS[key].detail}</span>
             </label>
           ))}
@@ -268,7 +268,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">2 · Your team</legend>
+        <legend className="reg-form__legend label">2 · Your team</legend>
         <div className="field-grid">
           <div className="field">
             <label className="field__label" htmlFor="team_name">
@@ -331,7 +331,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">
+        <legend className="reg-form__legend label">
           3 · Competitors ({form.members.length}/{settings.maxTeamSize})
         </legend>
         <p className="field__hint reg-form__hint">
@@ -414,7 +414,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">4 · Contact</legend>
+        <legend className="reg-form__legend label">4 · Contact</legend>
         <div className="field-grid">
           <div className="field">
             <label className="field__label" htmlFor="contact_name">
@@ -493,7 +493,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">5 · Media release</legend>
+        <legend className="reg-form__legend label">5 · Media release</legend>
         <div className="release">
           <p>
             During SFMO 2027 the San Francisco Math Initiative may take a limited number of
@@ -616,7 +616,7 @@ export function RegisterPage() {
 
       <section className="section">
         <div className="wrap wrap--narrow">
-          {settings === null && <p className="loading pixel">Checking registration…</p>}
+          {settings === null && <p className="loading label">Checking registration…</p>}
 
           {settings && !open && (
             <div className="panel locked">
@@ -630,7 +630,7 @@ export function RegisterPage() {
               <Countdown
                 target={opensAt}
                 fallback={
-                  <p className="locked__soon pixel">Opening any moment — refresh the page.</p>
+                  <p className="locked__soon label">Opening any moment — refresh the page.</p>
                 }
               />
 

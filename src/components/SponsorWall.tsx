@@ -45,7 +45,7 @@ function SponsorCard({ sponsor }: { sponsor: CurrentSponsor }) {
       </span>
       <span className="sponsor-card__foot">
         <span className="sponsor-card__name">{sponsor.name}</span>
-        <span className="sponsor-card__visit pixel">
+        <span className="sponsor-card__visit label">
           Visit <ExternalIcon size={11} />
           <span className="visually-hidden"> (opens in a new tab)</span>
         </span>

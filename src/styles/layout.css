@@ -130,13 +130,14 @@ main {
 .nav__link {
   position: relative;
   padding: 0.45rem 0.7rem;
-  font-family: var(--font-pixel);
-  font-size: 0.68rem;
+  font-family: var(--font-label);
+  font-size: 0.8rem;
   text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
   color: var(--ink-soft);
   border: 2px solid transparent;
+  font-weight: 500;
 }
 
 .nav__link:hover {
@@ -299,12 +300,13 @@ main {
 }
 
 .footer__heading {
-  font-family: var(--font-pixel);
-  font-size: 0.7rem;
+  font-family: var(--font-label);
+  font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #7fb4cc;
   margin-bottom: 0.7rem;
+  font-weight: 500;
 }
 
 .footer__list {

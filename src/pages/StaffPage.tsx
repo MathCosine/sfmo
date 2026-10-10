@@ -463,7 +463,7 @@ function Dashboard({ session }: { session: Session }) {
       )}
 
       <div className="staff__tools">
-        <p className="staff__tools-label pixel">
+        <p className="staff__tools-label label">
           Acting on {filtered.length} team{filtered.length === 1 ? '' : 's'} in view
         </p>
         <div className="btn-row">
@@ -547,7 +547,7 @@ function Dashboard({ session }: { session: Session }) {
       </div>
 
       {loading ? (
-        <p className="loading pixel">Loading registrations…</p>
+        <p className="loading label">Loading registrations…</p>
       ) : filtered.length === 0 ? (
         <div className="notice notice--info">
           <div>
@@ -732,7 +732,7 @@ export function StaffPage() {
               </p>
             </div>
           ) : !ready ? (
-            <p className="loading pixel">Checking session…</p>
+            <p className="loading label">Checking session…</p>
           ) : session ? (
             <Dashboard session={session} />
           ) : (

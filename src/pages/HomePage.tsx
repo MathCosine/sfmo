@@ -82,7 +82,7 @@ export function HomePage() {
 
         <div className="wrap hero__inner">
           <div className="hero__copy">
-            <p className="hero__eyebrow pixel">
+            <p className="hero__eyebrow label">
               {sfmo2027.edition} · {sfmo2027.theme}
             </p>
             <h1 className="hero__title">
@@ -214,7 +214,7 @@ export function HomePage() {
                   <span style={{ height: `${(round.minutes / longestRoundMinutes) * 100}%` }} />
                   <small className="mono">{round.minutes}&apos;</small>
                 </div>
-                <span className="round__index pixel" aria-hidden="true">
+                <span className="round__index label" aria-hidden="true">
                   {String(index + 1).padStart(2, '0')}
                 </span>
               </li>
@@ -264,8 +264,8 @@ export function HomePage() {
           </div>
           <ol className="daylog">
             {publicDay.map((slot) => (
-              <li className="daylog__row" key={slot.title}>
-                <span className="daylog__time pixel">{clock(slot.start)}</span>
+              <li className={`daylog__row ${slot.round ? 'daylog__row--round' : ''}`} key={slot.title}>
+                <span className="daylog__time label">{clock(slot.start)}</span>
                 <span className="daylog__body">
                   <strong>{slot.title}</strong>
                   <span>{slot.detail}</span>

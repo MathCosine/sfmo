@@ -16,7 +16,7 @@ function StaffCard({ member }: { member: StaffMember }) {
           position={member.photoPosition}
           contain={member.photoContain}
         />
-        <span className="crew__title pixel">{member.boardTitle}</span>
+        <span className="crew__title label">{member.boardTitle}</span>
       </div>
 
       <div className="crew__body">

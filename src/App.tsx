@@ -26,7 +26,7 @@ function RouteFallback() {
   return (
     <section className="section">
       <div className="wrap">
-        <p className="loading pixel">Loading…</p>
+        <p className="loading label">Loading…</p>
       </div>
     </section>
   );

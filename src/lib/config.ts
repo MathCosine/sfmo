@@ -103,6 +103,8 @@ export type DaySegment = {
   detail: string;
   /** Venue time the public never sees: setup and cleanup. Billed all the same. */
   staffOnly?: boolean;
+  /** A competition round — highlighted in the timeline. */
+  round?: boolean;
 };
 
 /** When the venue booking starts. Every other time is computed from this. */
@@ -132,18 +134,21 @@ export const daySchedule: DaySegment[] = [
     title: 'Individual round',
     minutes: roundMinutes('Individual'),
     detail: `20 problems, ${roundMinutes('Individual')} minutes, on your own.`,
+    round: true,
   },
   { title: 'Short break', minutes: 15, detail: 'Papers in, Mystery Dive out.' },
   {
     title: 'Mystery Dive',
     minutes: roundMinutes('Mystery Dive'),
     detail: `${roundMinutes('Mystery Dive')} minutes. You find out when everyone does.`,
+    round: true,
   },
   { title: 'Lunch', minutes: 40, detail: 'Argue about problem 17.' },
   {
     title: 'Guts round',
     minutes: roundMinutes('Guts'),
     detail: `6 sets of 4, ${roundMinutes('Guts')} minutes, live scoreboard.`,
+    round: true,
   },
   {
     title: 'Awards ceremony',

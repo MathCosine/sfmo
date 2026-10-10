@@ -49,7 +49,7 @@
   display: inline-block;
   padding: 0.35rem 0.7rem;
   margin-bottom: 1.1rem;
-  font-size: 0.65rem;
+  font-size: 0.74rem;
   letter-spacing: 0.1em;
   color: var(--on-sub);
   background: var(--sub);
@@ -237,11 +237,12 @@
 
 .countdown__label {
   margin-top: 0.4rem;
-  font-family: var(--font-pixel);
-  font-size: 0.55rem;
+  font-family: var(--font-label);
+  font-size: 0.66rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #9ec9dd;
+  font-weight: 500;
 }
 
 @media (max-width: 460px) {
@@ -274,9 +275,10 @@
 .community__foot {
   margin-top: 1.5rem;
   text-align: center;
-  font-family: var(--font-pixel);
-  font-size: 0.7rem;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .community__foot a {
@@ -331,9 +333,11 @@
 }
 
 .calendar__code small {
-  font-size: 0.55rem;
+  font-size: 0.66rem;
   letter-spacing: 0.08em;
   opacity: 0.75;
+  font-family: var(--font-label);
+  font-weight: 500;
 }
 
 .calendar__head {
@@ -371,10 +375,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-family: var(--font-pixel);
-  font-size: 0.65rem;
+  font-family: var(--font-label);
+  font-size: 0.74rem;
   text-transform: uppercase;
   color: var(--lagoon-deep);
+  font-weight: 500;
 }
 
 .explore__actions {
@@ -423,7 +428,7 @@
 
 .loading {
   padding: 2rem 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--ink-soft);
 }
 
@@ -508,7 +513,7 @@
   top: -14px;
   left: 1.1rem;
   padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: var(--on-sub);
   background: var(--sub);
   border: var(--border);
@@ -581,7 +586,7 @@
   left: 0;
   bottom: 0;
   padding: 0.35rem 0.6rem;
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   letter-spacing: 0.06em;
   color: var(--on-sub);
   background: var(--sub);
@@ -613,14 +618,15 @@
 .crew__toggle {
   align-self: flex-start;
   padding: 0.35rem 0;
-  font-family: var(--font-pixel);
-  font-size: 0.62rem;
+  font-family: var(--font-label);
+  font-size: 0.74rem;
   text-transform: uppercase;
   color: var(--lagoon-deep);
   cursor: pointer;
   background: none;
   border: 0;
   border-bottom: 2px solid var(--sub);
+  font-weight: 500;
 }
 
 .crew__toggle:hover {
@@ -780,11 +786,12 @@
 
 .dive__subhead {
   margin-bottom: 0.8rem;
-  font-family: var(--font-pixel);
-  font-size: 0.75rem;
+  font-family: var(--font-label);
+  font-size: 0.8rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink);
+  font-weight: 500;
 }
 
 .dive__round-meta {
@@ -1016,7 +1023,7 @@
 
 .reg-form__legend {
   padding: 0.35rem 0.7rem;
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   color: var(--on-sub);
   background: var(--sub);
   border: var(--border);
@@ -1111,7 +1118,7 @@
   flex: none;
   min-width: 58px;
   padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   text-align: center;
   color: var(--on-sub);
   background: var(--sub);
@@ -1341,7 +1348,7 @@
   top: -11px;
   right: 1.1rem;
   padding: 0.16rem 0.4rem;
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   color: var(--ink);
   background: var(--paper);
   border: var(--border);
@@ -1413,7 +1420,7 @@
 }
 
 .deep-band .eyebrow {
-  color: #8fc7de;
+  color: #b9e0f0;
 }
 
 .deep-band h2 {
@@ -1423,8 +1430,8 @@
 .deep-band__note {
   max-width: 34ch;
   margin-top: 0.8rem;
-  font-size: 0.95rem;
-  color: #a9cfe1;
+  font-size: 1rem;
+  color: #dceff8;
 }
 
 /* Sits behind the copy; removes itself entirely when the drawing is absent. */
@@ -1444,35 +1451,81 @@
   }
 }
 
+/* The day as a dive log: a light card on the dark band. Dark ink on paper
+   reads far better than pale text on navy, and the band still carries the
+   deep-sea mood around it. */
 .daylog {
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: 0.5rem 1.3rem;
   margin: 0;
   list-style: none;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border-thick);
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* A depth gauge: one dashed line threading the time chips top to bottom.
+   Sits at the centre of the 76px time column. */
+.daylog::before {
+  content: '';
+  position: absolute;
+  top: 1.6rem;
+  bottom: 1.6rem;
+  left: calc(1.3rem + 38px);
+  border-left: 2px dashed color-mix(in srgb, var(--ink) 28%, transparent);
 }
 
 .daylog__row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   gap: 1rem;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.daylog__row:last-child {
+  border-bottom: 0;
 }
 
 .daylog__time {
-  font-size: 0.78rem;
-  color: var(--sub);
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.84rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+/* Rounds get the submarine-yellow chip, so the three that matter jump out. */
+.daylog__row--round .daylog__time {
+  color: var(--on-sub);
+  background: var(--sub);
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 .daylog__body {
   display: flex;
   flex-direction: column;
+  gap: 0.1rem;
+}
+
+.daylog__body strong {
+  font-size: 1.02rem;
+  font-weight: 800;
 }
 
 .daylog__body span {
-  font-size: 0.87rem;
-  color: #a9cfe1;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
 }
 
 /* --------------------------------------------------------------------------
@@ -1492,11 +1545,11 @@
 
 .faq__q {
   padding: 0.95rem 1.15rem;
-  font-family: var(--font-pixel);
-  font-size: 0.75rem;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: 1.02rem;
   cursor: pointer;
   list-style: none;
+  font-weight: 800;
 }
 
 .faq__q::-webkit-details-marker {
@@ -1652,7 +1705,7 @@
 }
 
 .tabs__code {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
 }
 
 .tabs__meta {
@@ -1679,7 +1732,7 @@
 
 .staff__tools-label {
   margin-bottom: 0.7rem;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
 }
@@ -1702,12 +1755,15 @@
   display: inline-block;
   margin-bottom: 0.9rem;
   padding: 0.32rem 0.7rem;
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   letter-spacing: 0.08em;
   color: var(--on-sub);
   border: var(--border);
   border-radius: 6px;
   box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-label);
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
 .sponsor-tier__label--gold {
@@ -1836,7 +1892,7 @@
   flex: none;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: var(--lagoon-deep);
 }
 
@@ -1899,7 +1955,7 @@
 }
 
 .division-option__label {
-  font-size: 0.8rem;
+  font-size: 0.86rem;
 }
 
 .division-option__detail {

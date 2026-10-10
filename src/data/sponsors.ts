@@ -62,9 +62,7 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     name: 'CodeCrafters',
     tier: 'silver',
     url: 'https://codecrafters.io/',
-    logo: 'codecrafters.png',
-    // Their wordmark is white, drawn for their own near-black brand ground.
-    plate: { background: '#071014', foreground: '#ffffff' },
+    logo: 'codecrafters.svg',
   },
   {
     name: 'Art of Problem Solving',

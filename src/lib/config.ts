@@ -107,21 +107,55 @@ export const faq = [
   },
   {
     q: 'Who can compete?',
-    a: 'Any student who wants to. There is no qualification requirement and no geographic restriction on who may register.',
+    a: 'Any student who wants to — there is no qualification requirement. Where you live decides only your division: within 100 miles of the Bay Area you compete in person, and teams farther away can compete online.',
   },
   {
     q: 'What should we bring?',
     a: 'Pencils and yourselves. No calculators, no notes, no phones during rounds. Scratch paper is provided.',
   },
   {
+    q: 'Can we compete online?',
+    a: 'Only if you live more than 100 miles from the Bay Area. Anyone closer — from San Francisco and the Peninsula to the South Bay, the East Bay, the North Bay, and out as far as Sacramento, Santa Cruz and Monterey — competes in person.',
+  },
+  {
     q: 'When is the exact date and venue?',
-    a: 'Both are announced with registration on October 24, 2026. It is a single full day in January 2027, in San Francisco.',
+    a: 'The in-person venue is still being finalised; we will announce it, with the exact date, as soon as both are confirmed. It is a single full day in January 2027, in San Francisco.',
   },
   {
     q: 'How do the competitor IDs work?',
     a: 'Your team gets a two-digit number when you register — say 07 — and each member is assigned a letter, so you compete as 07A through 07D. Write yours on every answer sheet.',
   },
 ] as const;
+
+/**
+ * The two SFMO 2027 divisions. Where a team lives decides which one it enters:
+ * see `distanceRule`. Keys match the `division` values stored in Supabase.
+ */
+export const DIVISIONS = {
+  in_person: {
+    label: 'In person',
+    detail: 'San Francisco · venue still being finalised',
+  },
+  online: {
+    label: 'Online',
+    detail: 'For teams living more than 100 miles from the Bay Area',
+  },
+} as const;
+
+export type Division = keyof typeof DIVISIONS;
+
+export const IN_PERSON_RADIUS_MILES = 100;
+
+/**
+ * The distance rule, worded once and shown on the landing page, the FAQ and
+ * the registration form. The places named are examples, not the boundary.
+ */
+export const distanceRule = {
+  rule: `If you live within ${IN_PERSON_RADIUS_MILES} miles of the Bay Area, you compete in person.`,
+  reach:
+    'That covers the whole Bay Area — San Francisco, the Peninsula, the South Bay (Cupertino, Saratoga, San Jose), the East Bay (San Ramon, Oakland, Fremont) and the North Bay — and reaches as far as Sacramento, Santa Cruz and Monterey.',
+  online: 'The online division is for teams farther away.',
+} as const;
 
 /** Slot letters a team's members are assigned, in order. */
 export const SLOT_LETTERS = ['A', 'B', 'C', 'D'] as const;

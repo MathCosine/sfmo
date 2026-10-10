@@ -3,7 +3,14 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { asset } from '../lib/asset';
-import { links, sfmo2027 } from '../lib/config';
+import {
+  DIVISIONS,
+  IN_PERSON_RADIUS_MILES,
+  distanceRule,
+  links,
+  sfmo2027,
+  type Division,
+} from '../lib/config';
 import {
   emptyMember,
   emptyTeam,
@@ -18,11 +25,18 @@ import {
 import { isSupabaseConfigured } from '../lib/supabase';
 
 const WHAT_WE_ASK = [
+  `Your division — in person, or online if every member lives more than ${IN_PERSON_RADIUS_MILES} miles from the Bay Area`,
   'A team name, and the school or club you are representing',
   `Up to ${sfmo2027.maxTeamSize} competitors — name, grade, and email for each`,
   'One contact person we can reach about logistics',
+  'A media release, signed by your team captain on behalf of the whole team',
   'Agreement to the competition policies, published before registration opens',
 ];
+
+/** Same normalisation register_team() applies server-side. */
+function normaliseName(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
 function Receipt({ receipt }: { receipt: TeamReceipt }) {
   return (
@@ -48,6 +62,13 @@ function Receipt({ receipt }: { receipt: TeamReceipt }) {
       </ul>
 
       <p className="receipt__status">
+        {receipt.division && (
+          <>
+            Division: <strong>{DIVISIONS[receipt.division].label}</strong>
+            {receipt.division === 'in_person' && ' (venue still being finalised)'}
+            {' · '}
+          </>
+        )}
         Status: <span className="badge badge--sub">{receipt.status}</span>
       </p>
     </div>
@@ -171,12 +192,31 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
     );
   }
 
+  const signerOnRoster = form.members.some(
+    (member) =>
+      member.full_name.trim() !== '' &&
+      normaliseName(member.full_name) === normaliseName(form.media_release_signed_by),
+  );
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!signerOnRoster) {
+      setError(
+        'The media release must be signed by one of the competitors on your team — type the captain\'s name exactly as it appears in the competitor list.',
+      );
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      setReceipt(await registerTeam(form));
+      // An in-person team has nothing to attest; never send a stale tick from
+      // a moment when "online" was selected.
+      setReceipt(
+        await registerTeam({
+          ...form,
+          distance_attested: form.division === 'online' && form.distance_attested,
+        }),
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Registration failed.');
     } finally {
@@ -189,7 +229,46 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
   return (
     <form onSubmit={onSubmit} className="reg-form">
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">1 · Your team</legend>
+        <legend className="reg-form__legend pixel">1 · Division</legend>
+        <div className="division-picker" role="radiogroup" aria-label="Division">
+          {(Object.keys(DIVISIONS) as Division[]).map((key) => (
+            <label
+              key={key}
+              className={`division-option ${form.division === key ? 'division-option--on' : ''}`}
+            >
+              <input
+                type="radio"
+                name="division"
+                value={key}
+                checked={form.division === key}
+                onChange={() => setField('division', key)}
+                required
+              />
+              <span className="division-option__label pixel">{DIVISIONS[key].label}</span>
+              <span className="division-option__detail">{DIVISIONS[key].detail}</span>
+            </label>
+          ))}
+        </div>
+        <p className="field__hint reg-form__rule">
+          <strong>{distanceRule.rule}</strong> {distanceRule.reach} {distanceRule.online}
+        </p>
+        {form.division === 'online' && (
+          <label className="checkbox reg-form__attest">
+            <input
+              type="checkbox"
+              checked={form.distance_attested}
+              onChange={(event) => setField('distance_attested', event.target.checked)}
+              required
+            />
+            <span>
+              No member of our team lives within {IN_PERSON_RADIUS_MILES} miles of the Bay Area.
+            </span>
+          </label>
+        )}
+      </fieldset>
+
+      <fieldset className="reg-form__group" disabled={busy}>
+        <legend className="reg-form__legend pixel">2 · Your team</legend>
         <div className="field-grid">
           <div className="field">
             <label className="field__label" htmlFor="team_name">
@@ -253,7 +332,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
 
       <fieldset className="reg-form__group" disabled={busy}>
         <legend className="reg-form__legend pixel">
-          2 · Competitors ({form.members.length}/{settings.maxTeamSize})
+          3 · Competitors ({form.members.length}/{settings.maxTeamSize})
         </legend>
         <p className="field__hint reg-form__hint">
           Members are assigned slots in this order. If your team ID is 07, these become 07A, 07B,
@@ -335,7 +414,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend pixel">3 · Contact</legend>
+        <legend className="reg-form__legend pixel">4 · Contact</legend>
         <div className="field-grid">
           <div className="field">
             <label className="field__label" htmlFor="contact_name">
@@ -413,6 +492,58 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
         </div>
       </fieldset>
 
+      <fieldset className="reg-form__group" disabled={busy}>
+        <legend className="reg-form__legend pixel">5 · Media release</legend>
+        <div className="release">
+          <p>
+            During SFMO 2027 the San Francisco Math Initiative may take a limited number of
+            photographs of competitors and teams. By signing below, the team captain grants the San
+            Francisco Math Initiative permission to keep these photographs and to use them, without
+            payment, on our website, on social media and in other materials promoting our
+            competitions, now and in the future, and releases the San Francisco Math Initiative
+            from any claims arising from that use.
+          </p>
+        </div>
+        <div className="field reg-form__signature">
+          <label className="field__label" htmlFor="media_release_signed_by">
+            Captain&apos;s full name — your typed signature <span className="req">*</span>
+          </label>
+          <input
+            id="media_release_signed_by"
+            className="input"
+            required
+            autoComplete="off"
+            value={form.media_release_signed_by}
+            onChange={(event) => setField('media_release_signed_by', event.target.value)}
+            aria-describedby="signature-hint"
+          />
+          <p
+            id="signature-hint"
+            className={`field__hint ${form.media_release_signed_by && !signerOnRoster ? 'field__hint--warn' : ''}`}
+          >
+            {form.media_release_signed_by && !signerOnRoster
+              ? 'This must match one of the competitor names above exactly.'
+              : 'The captain must be one of the competitors listed above.'}
+          </p>
+        </div>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={form.media_release}
+            onChange={(event) => setField('media_release', event.target.checked)}
+            required
+          />
+          <span>
+            I am the captain of this team. I agree to the media release above on behalf of every
+            member of my team, and I confirm that each member — and, for any member under 18, their
+            parent or guardian — has agreed to it.
+          </span>
+        </label>
+        <p className="field__hint reg-form__waiver">
+          A separate liability waiver will be sent to your team before competition day.
+        </p>
+      </fieldset>
+
       <label className="checkbox reg-form__agree">
         <input
           type="checkbox"
@@ -476,7 +607,8 @@ export function RegisterPage() {
           <p className="eyebrow">SFMO 2027</p>
           <h1>Register a Team</h1>
           <p className="lede">
-            Teams of up to {sfmo2027.maxTeamSize}, free to enter, in person in San Francisco. Every
+            Teams of up to {sfmo2027.maxTeamSize}, free to enter — in person in San Francisco, or
+            online if your team lives more than {IN_PERSON_RADIUS_MILES} miles from the Bay Area. Every
             competitor gets an ID the moment you register.
           </p>
         </div>

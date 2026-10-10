@@ -1178,7 +1178,7 @@
 
 .staff__filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) 180px 180px;
   gap: 1rem;
   align-items: end;
 }
@@ -1849,4 +1849,102 @@
 /* Archive plates that carry a logo get the same light ground. */
 .sponsors__item--logo {
   background: var(--logo-plate);
+}
+
+/* --------------------------------------------------------------------------
+   Divisions & media release
+   -------------------------------------------------------------------------- */
+
+.distance-rule {
+  margin-top: 1.2rem;
+}
+
+.division-picker {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* The whole card is the click target; the radio stays visible for clarity
+   and keyboard users get the native radiogroup arrow-key behaviour. */
+.division-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.2rem 0.6rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.division-option:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.division-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--lagoon-deep);
+}
+
+.division-option--on {
+  background: color-mix(in srgb, var(--sub) 22%, var(--paper));
+  box-shadow: var(--shadow);
+}
+
+.division-option__label {
+  font-size: 0.8rem;
+}
+
+.division-option__detail {
+  grid-column: 2;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.reg-form__rule {
+  margin-top: 0.9rem;
+  line-height: 1.55;
+}
+
+.reg-form__rule strong {
+  color: var(--ink);
+}
+
+.reg-form__attest {
+  margin-top: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--paper-warm);
+  border: 2px dashed var(--ink-faint);
+}
+
+.release {
+  max-height: 11rem;
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: var(--border);
+}
+
+.reg-form__signature {
+  margin-bottom: 0.9rem;
+}
+
+.field__hint--warn {
+  color: var(--coral);
+  font-weight: 700;
+}
+
+.reg-form__waiver {
+  margin-top: 0.9rem;
 }

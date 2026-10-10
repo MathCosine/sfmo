@@ -102,6 +102,30 @@ You can also set `registration_closes_at`, `max_team_size`, and an
 
 ---
 
+## 6. Project paused, or replacing it
+
+Free-plan projects are **paused after a week of low activity**. While paused,
+the public site cannot read the registration window, so `/register` quietly
+shows "not open yet" and the staff portal cannot sign in. Nothing errors
+loudly — so check it before registration opens on October 24.
+
+**Restore it (keeps everything).** Dashboard → the project → **Restore**.
+Supabase's docs currently allow a year to do this. The Project URL and anon
+key do not change, so the GitHub secrets stay as they are. Then run the
+latest `schema.sql` once more (step 2) — it is safe to re-run, and it adds
+anything newer than what the project has, such as the division and media
+release columns.
+
+**Replace it with a new project.** Follow steps 1–4 again on the new project,
+then in GitHub replace the two secrets, `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY`, with the new project's values, and re-run the
+deploy workflow (Actions → Deploy to GitHub Pages → Run workflow). Two things
+do not carry over to a new project: staff accounts (recreate them, step 4)
+and any registrations already taken (export them from the staff portal's
+**Export CSV** first).
+
+---
+
 ## How the pieces fit
 
 ```
@@ -131,6 +155,17 @@ IDs** using the team ID plus their contact email.
 
 **Abuse guard.** One contact email may register at most 5 non-cancelled
 teams. Raise it in `register_team()` if a coach legitimately needs more.
+
+**Divisions and the distance rule.** `teams.division` is `in_person` or
+`online`. Anyone living within 100 miles of the Bay Area competes in person,
+so an online registration is refused unless the team confirms no member
+does (`distance_attested`).
+
+**Media release.** Every registration requires the captain's media release,
+given on behalf of the whole team. The captain signs by typing their name,
+which `register_team()` checks against the roster (ignoring case and extra
+spaces), and the signature and time are stored on the team. The liability
+waiver is handled separately, outside registration.
 
 ---
 

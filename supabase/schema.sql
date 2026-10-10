@@ -64,6 +64,20 @@ create table if not exists public.teams (
 
 alter sequence public.team_number_seq owned by public.teams.team_number;
 
+-- ...and again as ADD COLUMN IF NOT EXISTS, because CREATE TABLE IF NOT EXISTS
+-- skips an existing table entirely: a project created from an older version
+-- of this file would otherwise never receive them.
+--
+-- division: 'in_person' or 'online'. Teams living within 100 miles of the Bay
+--   Area must compete in person; distance_attested records the team's
+--   statement that no member does, which an online registration requires.
+-- media_release_*: the captain's release, given on behalf of the whole team,
+--   for event photos to be kept and used on the website and our channels.
+alter table public.teams add column if not exists distance_attested boolean not null default false;
+alter table public.teams add column if not exists media_release boolean not null default false;
+alter table public.teams add column if not exists media_release_signed_by text;
+alter table public.teams add column if not exists media_release_signed_at timestamptz;
+
 create index if not exists teams_contact_email_idx on public.teams (lower(contact_email));
 create index if not exists teams_status_idx on public.teams (status);
 create index if not exists teams_created_at_idx on public.teams (created_at desc);
@@ -232,6 +246,8 @@ create policy "admins manage directory"
 --     "city": "...", "state_region": "...", "country": "...",
 --     "contact_name": "...", "contact_email": "...", "contact_phone": "...",
 --     "coach_name": "...", "coach_email": "...", "notes": "...",
+--     "division": "in_person" | "online", "distance_attested": true,
+--     "media_release": true, "media_release_signed_by": "<captain's full name>",
 --     "agreed_policies": true,
 --     "members": [ { "full_name": "...", "email": "...", "grade": "9", "school": "..." } ]
 --   }
@@ -253,6 +269,8 @@ declare
   idx           integer := 0;
   contact       text := btrim(coalesce(payload ->> 'contact_email', ''));
   team_name     text := btrim(coalesce(payload ->> 'team_name', ''));
+  division      text := btrim(coalesce(payload ->> 'division', ''));
+  signer        text := btrim(coalesce(payload ->> 'media_release_signed_by', ''));
   existing      integer;
 begin
   select * into settings from public.site_settings where id = 1;
@@ -282,6 +300,33 @@ begin
       using errcode = 'P0001';
   end if;
 
+  if division not in ('in_person', 'online') then
+    raise exception 'Choose the in-person or the online division.' using errcode = 'P0001';
+  end if;
+
+  -- The distance rule: anyone within 100 miles of the Bay Area competes in
+  -- person, so an online team must state that none of its members does.
+  if division = 'online'
+     and coalesce((payload ->> 'distance_attested')::boolean, false) is not true then
+    raise exception 'Online registration requires confirming that no member of your team lives within 100 miles of the Bay Area.'
+      using errcode = 'P0001';
+  end if;
+
+  if coalesce((payload ->> 'media_release')::boolean, false) is not true then
+    raise exception 'The team captain must agree to the media release.' using errcode = 'P0001';
+  end if;
+
+  -- The release is signed by the captain, who must be on the roster. Names are
+  -- compared case- and whitespace-insensitively so "jane  doe" matches "Jane Doe".
+  if signer = '' or not exists (
+    select 1 from jsonb_array_elements(members) m
+    where lower(regexp_replace(btrim(m ->> 'full_name'), '\s+', ' ', 'g'))
+        = lower(regexp_replace(signer, '\s+', ' ', 'g'))
+  ) then
+    raise exception 'The media release must be signed by one of the competitors on your team, exactly as their name is entered.'
+      using errcode = 'P0001';
+  end if;
+
   if coalesce((payload ->> 'agreed_policies')::boolean, false) is not true then
     raise exception 'You must agree to the competition policies.' using errcode = 'P0001';
   end if;
@@ -299,11 +344,12 @@ begin
   insert into public.teams (
     team_name, division, school, city, state_region, country,
     contact_name, contact_email, contact_phone,
-    coach_name, coach_email, notes, agreed_policies
+    coach_name, coach_email, notes, agreed_policies,
+    distance_attested, media_release, media_release_signed_by, media_release_signed_at
   )
   values (
     team_name,
-    nullif(btrim(coalesce(payload ->> 'division', '')), ''),
+    division,
     nullif(btrim(coalesce(payload ->> 'school', '')), ''),
     nullif(btrim(coalesce(payload ->> 'city', '')), ''),
     nullif(btrim(coalesce(payload ->> 'state_region', '')), ''),
@@ -314,7 +360,11 @@ begin
     nullif(btrim(coalesce(payload ->> 'coach_name', '')), ''),
     nullif(btrim(coalesce(payload ->> 'coach_email', '')), ''),
     nullif(btrim(coalesce(payload ->> 'notes', '')), ''),
-    true
+    true,
+    division = 'online',
+    true,
+    signer,
+    now()
   )
   returning * into new_team;
 
@@ -445,5 +495,9 @@ select
       where m.team_id = t.id
     ),
     '[]'::jsonb
-  ) as members
+  ) as members,
+  t.distance_attested,
+  t.media_release,
+  t.media_release_signed_by,
+  t.media_release_signed_at
 from public.teams t;

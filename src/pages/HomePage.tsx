@@ -9,6 +9,8 @@ import { SponsorWall } from '../components/SponsorWall';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { asset } from '../lib/asset';
 import {
+  DIVISIONS,
+  distanceRule,
   faq,
   links,
   longestRoundMinutes,
@@ -92,7 +94,8 @@ export function HomePage() {
             </h1>
             <p className="hero__date pixel">January 2027</p>
             <p className="hero__where">
-              In person · San Francisco · Teams of up to {sfmo2027.maxTeamSize}
+              In person in San Francisco · Online division · Teams of up to{' '}
+              {sfmo2027.maxTeamSize}
             </p>
             <p className="hero__blurb">
               Our flagship competition comes home. One day, one city, and a set of problems written
@@ -142,6 +145,40 @@ export function HomePage() {
               </Link>
             }
           />
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      <section className="section section--tight divisions">
+        <div className="wrap">
+          <div className="section-head">
+            <p className="eyebrow">Two divisions</p>
+            <h2>In person, or online</h2>
+          </div>
+          <div className="grid grid--2">
+            <article className="card division-card">
+              <p className="card__eyebrow">{DIVISIONS.in_person.label}</p>
+              <h3 className="card__title">San Francisco</h3>
+              <p className="card__body">
+                The main event, in person. The venue is still being finalised.
+              </p>
+            </article>
+            <article className="card division-card">
+              <p className="card__eyebrow">{DIVISIONS.online.label}</p>
+              <h3 className="card__title">From anywhere farther</h3>
+              <p className="card__body">
+                SFMO 2027 online, for teams living more than 100 miles from the Bay Area.
+              </p>
+            </article>
+          </div>
+          <div className="notice notice--info distance-rule">
+            <div>
+              <p className="notice__title">The distance rule</p>
+              <p className="notice__body">
+                <strong>{distanceRule.rule}</strong> {distanceRule.reach} {distanceRule.online}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -222,7 +259,7 @@ export function HomePage() {
             <p className="eyebrow">Competition day</p>
             <h2>How the day runs</h2>
             <p className="deep-band__note">
-              A single full day in January. Exact times land with the venue on October 24 — this is
+              A single full day in January. Exact times land once the venue is confirmed — this is
               the shape of it.
             </p>
           </div>

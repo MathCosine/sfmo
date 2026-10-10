@@ -22,7 +22,7 @@ const principles = (countryWord: string) => [
   },
   {
     title: 'Open to anywhere',
-    body: `Competitors have written our contests from ${countryWord} countries across four continents. Our online events have no geographic requirement and never will.`,
+    body: `Competitors have written our contests from ${countryWord} countries across four continents. Wherever you live, there is a way to compete.`,
   },
   {
     title: 'Built, not bought',

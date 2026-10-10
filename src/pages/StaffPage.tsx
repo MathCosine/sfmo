@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { SeoHead } from '../components/SeoHead';
-import { links } from '../lib/config';
+import { DIVISIONS, links, type Division } from '../lib/config';
 import { isSupabaseConfigured, readErrorMessage, supabase } from '../lib/supabase';
 
 type RosterMember = {
@@ -16,7 +16,7 @@ type RosterRow = {
   id: string;
   team_code: string;
   team_name: string;
-  division: string | null;
+  division: Division | null;
   school: string | null;
   city: string | null;
   state_region: string | null;
@@ -31,7 +31,15 @@ type RosterRow = {
   status: string;
   created_at: string;
   members: RosterMember[];
+  distance_attested: boolean;
+  media_release: boolean;
+  media_release_signed_by: string | null;
+  media_release_signed_at: string | null;
 };
+
+function divisionLabel(division: Division | null) {
+  return division ? DIVISIONS[division].label : '—';
+}
 
 type Settings = {
   registration_open: boolean;
@@ -59,6 +67,7 @@ function toCsv(rows: RosterRow[]): string {
     'grade',
     'member_email',
     'division',
+    'distance_attested',
     'school',
     'city',
     'state_region',
@@ -71,6 +80,8 @@ function toCsv(rows: RosterRow[]): string {
     'coach_email',
     'notes',
     'staff_notes',
+    'media_release_signed_by',
+    'media_release_signed_at',
     'registered_at',
   ];
 
@@ -84,7 +95,8 @@ function toCsv(rows: RosterRow[]): string {
         member?.full_name ?? '',
         member?.grade ?? '',
         member?.email ?? '',
-        row.division,
+        divisionLabel(row.division),
+        row.distance_attested ? 'yes' : '',
         row.school,
         row.city,
         row.state_region,
@@ -97,6 +109,8 @@ function toCsv(rows: RosterRow[]): string {
         row.coach_email,
         row.notes,
         row.staff_notes,
+        row.media_release_signed_by,
+        row.media_release_signed_at,
         row.created_at,
       ]
         .map(csvCell)
@@ -198,6 +212,7 @@ function Dashboard({ session }: { session: Session }) {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [divisionFilter, setDivisionFilter] = useState<'all' | Division>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -237,6 +252,7 @@ function Dashboard({ session }: { session: Session }) {
     const needle = query.trim().toLowerCase();
     return rows.filter((row) => {
       if (statusFilter !== 'all' && row.status !== statusFilter) return false;
+      if (divisionFilter !== 'all' && row.division !== divisionFilter) return false;
       if (!needle) return true;
       const haystack = [
         row.team_code,
@@ -251,7 +267,7 @@ function Dashboard({ session }: { session: Session }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, query, statusFilter]);
+  }, [rows, query, statusFilter, divisionFilter]);
 
   const competitorCount = useMemo(
     () =>
@@ -510,6 +526,24 @@ function Dashboard({ session }: { session: Session }) {
             ))}
           </select>
         </div>
+        <div className="field">
+          <label className="field__label" htmlFor="staff-division">
+            Division
+          </label>
+          <select
+            id="staff-division"
+            className="select"
+            value={divisionFilter}
+            onChange={(event) => setDivisionFilter(event.target.value as 'all' | Division)}
+          >
+            <option value="all">All</option>
+            {(Object.keys(DIVISIONS) as Division[]).map((key) => (
+              <option value={key} key={key}>
+                {DIVISIONS[key].label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -531,6 +565,7 @@ function Dashboard({ session }: { session: Session }) {
               <tr>
                 <th>ID</th>
                 <th>Team</th>
+                <th>Division</th>
                 <th>Competitors</th>
                 <th>School</th>
                 <th>Contact</th>
@@ -549,6 +584,7 @@ function Dashboard({ session }: { session: Session }) {
                     <td>
                       <strong>{row.team_name}</strong>
                     </td>
+                    <td>{divisionLabel(row.division)}</td>
                     <td className="mono">
                       {row.members.map((member) => member.competitor_id).join(' ')}
                     </td>
@@ -576,7 +612,7 @@ function Dashboard({ session }: { session: Session }) {
                   </tr>
                   {expanded === row.id && (
                     <tr className="staff__detail">
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className="staff__detail-grid">
                           <div>
                             <h4 className="dive__subhead">Roster</h4>
@@ -616,6 +652,28 @@ function Dashboard({ session }: { session: Session }) {
                                 <dt>Notes</dt>
                                 <dd>{row.notes ?? '—'}</dd>
                               </div>
+                              <div className="facts__row">
+                                <dt>Media release</dt>
+                                <dd>
+                                  {row.media_release && row.media_release_signed_by
+                                    ? `Signed by ${row.media_release_signed_by}${
+                                        row.media_release_signed_at
+                                          ? `, ${new Date(row.media_release_signed_at).toLocaleDateString()}`
+                                          : ''
+                                      }`
+                                    : 'Not signed'}
+                                </dd>
+                              </div>
+                              {row.division === 'online' && (
+                                <div className="facts__row">
+                                  <dt>Distance rule</dt>
+                                  <dd>
+                                    {row.distance_attested
+                                      ? 'Attested: no member within 100 mi of the Bay Area'
+                                      : 'Not attested'}
+                                  </dd>
+                                </div>
+                              )}
                             </dl>
                           </div>
                         </div>

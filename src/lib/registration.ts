@@ -1,5 +1,5 @@
 import { readErrorMessage, requireSupabase, supabase } from './supabase';
-import { sfmo2027 } from './config';
+import { sfmo2027, type Division } from './config';
 
 export type MemberInput = {
   full_name: string;
@@ -10,7 +10,14 @@ export type MemberInput = {
 
 export type TeamInput = {
   team_name: string;
-  division: string;
+  /** Empty until the registrant picks one; the form will not submit without it. */
+  division: Division | '';
+  /** Required for online: no member lives within 100 miles of the Bay Area. */
+  distance_attested: boolean;
+  /** The captain's media release, given for the whole team. */
+  media_release: boolean;
+  /** Captain's typed signature; must match a competitor's name on the roster. */
+  media_release_signed_by: string;
   school: string;
   city: string;
   state_region: string;
@@ -35,7 +42,7 @@ export type ReceiptMember = {
 export type TeamReceipt = {
   team_code: string;
   team_name: string;
-  division: string | null;
+  division: Division | null;
   status: string;
   contact_email: string;
   created_at: string;
@@ -125,6 +132,9 @@ export function emptyTeam(): TeamInput {
   return {
     team_name: '',
     division: '',
+    distance_attested: false,
+    media_release: false,
+    media_release_signed_by: '',
     school: '',
     city: '',
     state_region: '',

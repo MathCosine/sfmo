@@ -109,21 +109,24 @@ export type DaySegment = {
 export const DAY_START = '08:30';
 
 /**
- * Competition day, in order. Built to be short, because the venue bills by the
- * hour from setup to cleanup:
- *  - rules are read before arrival, so the briefing is 10 minutes, not 30;
+ * Competition day, in order. The venue bills by the full hour from setup to
+ * cleanup, so the day is built to fill exactly 6 hours — not a minute more,
+ * since one minute over is charged as another hour.
  *  - Individual and Mystery Dive papers are graded over lunch and during Guts,
  *    so there is no grading wait at the end;
- *  - Guts is scored live, and awards open with the Individual and Mystery Dive
- *    results — the Guts tally finishes while those are read out.
+ *  - Guts is scored live, and the awards ceremony opens with the Individual and
+ *    Mystery Dive results, so the Guts tally finishes while those are read out.
+ * The slack lives in three blocks that can shrink if the day runs late: the
+ * opening ceremony absorbs late arrivals, lunch absorbs a slow morning, and the
+ * awards ceremony absorbs a slow tally — protecting the 6-hour line.
  */
 export const daySchedule: DaySegment[] = [
   { title: 'Setup', minutes: 30, detail: 'Tables, signage, check-in desk.', staffOnly: true },
   { title: 'Doors & check-in', minutes: 30, detail: 'Collect your competitor IDs and find your table.' },
   {
-    title: 'Briefing',
-    minutes: 10,
-    detail: 'The honour code and how Guts works. Read the full rules before you arrive.',
+    title: 'Opening ceremony',
+    minutes: 20,
+    detail: 'Welcome, the honour code, and how Guts works. Read the full rules before you arrive.',
   },
   {
     title: 'Individual round',
@@ -136,15 +139,15 @@ export const daySchedule: DaySegment[] = [
     minutes: roundMinutes('Mystery Dive'),
     detail: `${roundMinutes('Mystery Dive')} minutes. You find out when everyone does.`,
   },
-  { title: 'Lunch', minutes: 30, detail: 'Argue about problem 17.' },
+  { title: 'Lunch', minutes: 40, detail: 'Argue about problem 17.' },
   {
     title: 'Guts round',
     minutes: roundMinutes('Guts'),
     detail: `6 sets of 4, ${roundMinutes('Guts')} minutes, live scoreboard.`,
   },
   {
-    title: 'Awards',
-    minutes: 20,
+    title: 'Awards ceremony',
+    minutes: 30,
     detail: 'Individual and Mystery Dive results first, then Guts and the overall winners.',
   },
   { title: 'Cleanup', minutes: 30, detail: 'Tables down, room handed back.', staffOnly: true },

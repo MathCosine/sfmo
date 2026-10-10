@@ -76,4 +76,10 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     url: 'https://xyz.xyz/',
     logo: 'xyz.png',
   },
+  {
+    name: 'MehtA+',
+    tier: 'bronze',
+    url: 'https://mehtaplus.com/',
+    logo: 'mehtaplus.png',
+  },
 ];

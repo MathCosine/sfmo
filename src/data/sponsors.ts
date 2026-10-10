@@ -65,6 +65,12 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     logo: 'codecrafters.svg',
   },
   {
+    name: 'RISE Research',
+    tier: 'silver',
+    url: 'https://riseglobaleducation.com/',
+    logo: 'rise.png',
+  },
+  {
     name: 'Art of Problem Solving',
     tier: 'bronze',
     url: 'https://artofproblemsolving.com/',

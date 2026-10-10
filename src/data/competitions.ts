@@ -1,3 +1,5 @@
+import { numberWord } from '../lib/words';
+
 /** The three annual contests — one every season, all free to enter. */
 
 export type Competition = {
@@ -70,14 +72,7 @@ export const participantCountries: ParticipantCountry[] = [
  */
 export const participantCountryCount = participantCountries.length;
 
-const NUMBER_WORDS = [
-  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
-  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen',
-  'seventeen', 'eighteen', 'nineteen', 'twenty',
-];
-
-export const participantCountryWord =
-  NUMBER_WORDS[participantCountryCount] ?? String(participantCountryCount);
+export const participantCountryWord = numberWord(participantCountryCount);
 
 export const communityStats = [
   {

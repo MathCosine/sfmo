@@ -52,7 +52,11 @@ export type Round = {
   mystery?: boolean;
 };
 
-/** SFMO 2027 round format. Times are the working duration, not including breaks. */
+/**
+ * SFMO 2027 round format, in the order they run on the day. Minutes are the
+ * working time; the day schedule below takes each round's slot from here, so
+ * changing a round's length here moves every time after it.
+ */
 export const rounds: Round[] = [
   {
     code: 'I',
@@ -63,22 +67,6 @@ export const rounds: Round[] = [
       'Short-answer problems climbing steadily in difficulty. Sit it alone — this is the round that separates the field.',
   },
   {
-    code: 'G',
-    name: 'Guts',
-    detail: '9 sets of 3',
-    minutes: 75,
-    blurb:
-      'Sets are handed out one at a time and you only move on once the set is in. Fast, loud, and the best spectator round we run.',
-  },
-  {
-    code: 'T',
-    name: 'Team',
-    detail: '10 problems',
-    minutes: 45,
-    blurb:
-      'Harder than the Individual round and meant to be split up. Four heads, one answer sheet, one hour.',
-  },
-  {
     code: '?',
     name: 'Mystery Dive',
     detail: 'Format revealed on the day',
@@ -86,6 +74,14 @@ export const rounds: Round[] = [
     blurb:
       'Team-based, and that is all we are saying. You will find out what it is when everyone else does.',
     mystery: true,
+  },
+  {
+    code: 'G',
+    name: 'Guts',
+    detail: '6 sets of 4',
+    minutes: 60,
+    blurb:
+      'Sets are handed out one at a time and you only move on once the set is in. Fast, loud, and the best spectator round we run.',
   },
 ];
 
@@ -95,6 +91,81 @@ export const totalRoundMinutes = rounds.reduce((sum, round) => sum + round.minut
 /** The longest round, used to scale the dive-profile bars. */
 export const longestRoundMinutes = Math.max(...rounds.map((round) => round.minutes));
 
+function roundMinutes(name: Round['name']): number {
+  const round = rounds.find((candidate) => candidate.name === name);
+  if (!round) throw new Error(`No round named "${name}" in config.rounds`);
+  return round.minutes;
+}
+
+export type DaySegment = {
+  title: string;
+  minutes: number;
+  detail: string;
+  /** Venue time the public never sees: setup and cleanup. Billed all the same. */
+  staffOnly?: boolean;
+};
+
+/** When the venue booking starts. Every other time is computed from this. */
+export const DAY_START = '08:30';
+
+/**
+ * Competition day, in order. Built to be short, because the venue bills by the
+ * hour from setup to cleanup:
+ *  - rules are read before arrival, so the briefing is 10 minutes, not 30;
+ *  - Individual and Mystery Dive papers are graded over lunch and during Guts,
+ *    so there is no grading wait at the end;
+ *  - Guts is scored live, and awards open with the Individual and Mystery Dive
+ *    results — the Guts tally finishes while those are read out.
+ */
+export const daySchedule: DaySegment[] = [
+  { title: 'Setup', minutes: 30, detail: 'Tables, signage, check-in desk.', staffOnly: true },
+  { title: 'Doors & check-in', minutes: 30, detail: 'Collect your competitor IDs and find your table.' },
+  {
+    title: 'Briefing',
+    minutes: 10,
+    detail: 'The honour code and how Guts works. Read the full rules before you arrive.',
+  },
+  {
+    title: 'Individual round',
+    minutes: roundMinutes('Individual'),
+    detail: `20 problems, ${roundMinutes('Individual')} minutes, on your own.`,
+  },
+  { title: 'Short break', minutes: 15, detail: 'Papers in, Mystery Dive out.' },
+  {
+    title: 'Mystery Dive',
+    minutes: roundMinutes('Mystery Dive'),
+    detail: `${roundMinutes('Mystery Dive')} minutes. You find out when everyone does.`,
+  },
+  { title: 'Lunch', minutes: 30, detail: 'Argue about problem 17.' },
+  {
+    title: 'Guts round',
+    minutes: roundMinutes('Guts'),
+    detail: `6 sets of 4, ${roundMinutes('Guts')} minutes, live scoreboard.`,
+  },
+  {
+    title: 'Awards',
+    minutes: 20,
+    detail: 'Individual and Mystery Dive results first, then Guts and the overall winners.',
+  },
+  { title: 'Cleanup', minutes: 30, detail: 'Tables down, room handed back.', staffOnly: true },
+];
+
+export type TimedSegment = DaySegment & { start: number; end: number };
+
+/** The schedule with start/end times (minutes after midnight) filled in. */
+export const timedSchedule: TimedSegment[] = (() => {
+  const [hours, minutes] = DAY_START.split(':').map(Number);
+  let cursor = hours * 60 + minutes;
+  return daySchedule.map((segment) => {
+    const timed = { ...segment, start: cursor, end: cursor + segment.minutes };
+    cursor = timed.end;
+    return timed;
+  });
+})();
+
+/** Total venue time — what the hourly rate applies to, setup and cleanup included. */
+export const venueMinutes = daySchedule.reduce((sum, segment) => sum + segment.minutes, 0);
+
 /** Frequently asked questions shown on the landing page. */
 export const faq = [
   {
@@ -103,7 +174,7 @@ export const faq = [
   },
   {
     q: 'Do I need a full team of four?',
-    a: 'No. You can register with fewer and we will do our best to pair you up, though a full team of four is the intended experience — the Team and Mystery Dive rounds are built around it.',
+    a: 'No. You can register with fewer and we will do our best to pair you up, though a full team of four is the intended experience — the Mystery Dive and Guts rounds are built around it.',
   },
   {
     q: 'Who can compete?',
@@ -119,7 +190,7 @@ export const faq = [
   },
   {
     q: 'When is the exact date and venue?',
-    a: 'The in-person venue is still being finalised; we will announce it, with the exact date, as soon as both are confirmed. It is a single full day in January 2027, in San Francisco.',
+    a: 'The in-person venue is still being finalised; we will announce it, with the exact date, as soon as both are confirmed. It is a single day in January 2027, in San Francisco, finishing in the early afternoon.',
   },
   {
     q: 'How do the competitor IDs work?',

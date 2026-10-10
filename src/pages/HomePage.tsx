@@ -16,20 +16,18 @@ import {
   longestRoundMinutes,
   rounds,
   sfmo2027,
+  timedSchedule,
   totalRoundMinutes,
 } from '../lib/config';
+import { capitalise, clock, formatDuration, numberWord } from '../lib/words';
+
+/** Competitors see doors-to-awards; setup and cleanup are staff-only. */
+const publicDay = timedSchedule.filter((segment) => !segment.staffOnly);
+const doorsOpen = publicDay[0];
+const dayEnds = publicDay[publicDay.length - 1];
+const describedRounds = rounds.filter((round) => !round.mystery).length;
 
 
-const DAY = [
-  { time: '08:30', title: 'Doors & check-in', detail: 'Collect your competitor IDs and find your table.' },
-  { time: '09:30', title: 'Opening ceremony', detail: 'Rules, the honour code, and how Guts actually works.' },
-  { time: '10:00', title: 'Individual round', detail: '20 problems, 60 minutes, on your own.' },
-  { time: '11:15', title: 'Team round', detail: '10 problems, 45 minutes, four heads.' },
-  { time: '12:00', title: 'Lunch', detail: 'Provided. Argue about problem 17.' },
-  { time: '13:00', title: 'Mystery Dive', detail: '45 minutes. You find out when everyone does.' },
-  { time: '14:00', title: 'Guts round', detail: '9 sets of 3, 75 minutes, live scoreboard.' },
-  { time: '15:30', title: 'Awards', detail: 'Results, prizes, and the shortlist reveal.' },
-];
 
 const EXPLORE = [
   {
@@ -187,10 +185,11 @@ export function HomePage() {
         <div className="wrap">
           <div className="section-head">
             <p className="eyebrow">The dive plan</p>
-            <h2>Four rounds, one day</h2>
+            <h2>{capitalise(numberWord(rounds.length))} rounds, one day</h2>
             <p className="lede">
-              {Math.floor(totalRoundMinutes / 60)} hours {totalRoundMinutes % 60} minutes of
-              mathematics, split four ways. Three of them we can describe.
+              {capitalise(formatDuration(totalRoundMinutes))} of mathematics, split{' '}
+              {numberWord(rounds.length)} ways. {capitalise(numberWord(describedRounds))} of them we
+              can describe.
             </p>
           </div>
 
@@ -259,14 +258,14 @@ export function HomePage() {
             <p className="eyebrow">Competition day</p>
             <h2>How the day runs</h2>
             <p className="deep-band__note">
-              A single full day in January. Exact times land once the venue is confirmed — this is
-              the shape of it.
+              One day in January: doors at {clock(doorsOpen.start)}, done by {clock(dayEnds.end)}.
+              Exact times land once the venue is confirmed — this is the shape of it.
             </p>
           </div>
           <ol className="daylog">
-            {DAY.map((slot) => (
-              <li className="daylog__row" key={slot.time}>
-                <span className="daylog__time pixel">{slot.time}</span>
+            {publicDay.map((slot) => (
+              <li className="daylog__row" key={slot.title}>
+                <span className="daylog__time pixel">{clock(slot.start)}</span>
                 <span className="daylog__body">
                   <strong>{slot.title}</strong>
                   <span>{slot.detail}</span>

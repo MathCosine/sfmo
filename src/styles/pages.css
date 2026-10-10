@@ -1729,15 +1729,23 @@
 }
 
 .sponsor-grid--gold {
-  --logo-h: 140px;
-  --logo-w: 380px;
+  --logo-h: 170px;
+  --logo-w: 440px;
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Fixed at two across: auto-fit would put four silver cards in one row,
+   each narrower than a bronze card, inverting the tier order. */
 .sponsor-grid--silver {
   --logo-h: 110px;
-  --logo-w: 300px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  --logo-w: 340px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 680px) {
+  .sponsor-grid--silver {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .sponsor-grid--bronze {
@@ -1802,9 +1810,12 @@
   object-fit: contain;
 }
 
+.sponsor-card__plate {
+  color: #0a2b3f;
+}
+
 .sponsor-card__fallback {
   font-weight: 800;
-  color: #0a2b3f;
 }
 
 .sponsor-card__foot {

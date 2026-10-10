@@ -17,6 +17,12 @@ export type CurrentSponsor = {
   url: string;
   /** Filename in public/sponsors/. */
   logo: string;
+  /**
+   * Override the light logo plate, for a mark designed for a dark ground
+   * (white text that would vanish on the default plate). `foreground` colours
+   * the name shown if the logo fails to load.
+   */
+  plate?: { background: string; foreground: string };
 };
 
 export const TIER_ORDER: SponsorTier[] = ['gold', 'silver', 'bronze'];
@@ -29,6 +35,12 @@ export const TIER_LABEL: Record<SponsorTier, string> = {
 
 export const sfmo2027Sponsors: CurrentSponsor[] = [
   {
+    name: 'PiMath',
+    tier: 'gold',
+    url: 'https://www.paquinmath.org/',
+    logo: 'pimath.png',
+  },
+  {
     name: 'AwesomeMath',
     tier: 'silver',
     url: 'https://www.awesomemath.org/',
@@ -39,6 +51,20 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     tier: 'silver',
     url: 'https://areteem.org/',
     logo: 'areteem.png',
+  },
+  {
+    name: 'YRI Fellowship',
+    tier: 'silver',
+    url: 'https://www.yriscience.com/',
+    logo: 'yri.png',
+  },
+  {
+    name: 'CodeCrafters',
+    tier: 'silver',
+    url: 'https://codecrafters.io/',
+    logo: 'codecrafters.png',
+    // Their wordmark is white, drawn for their own near-black brand ground.
+    plate: { background: '#071014', foreground: '#ffffff' },
   },
   {
     name: 'Art of Problem Solving',

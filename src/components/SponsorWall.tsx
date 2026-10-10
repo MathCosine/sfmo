@@ -22,7 +22,14 @@ function SponsorCard({ sponsor }: { sponsor: CurrentSponsor }) {
     >
       {/* Logo plates stay light in both themes: brand marks are drawn for a
           light ground, and AoPS navy or Areteem black vanish on dark blue. */}
-      <span className="sponsor-card__plate">
+      <span
+        className="sponsor-card__plate"
+        style={
+          sponsor.plate
+            ? { background: sponsor.plate.background, color: sponsor.plate.foreground }
+            : undefined
+        }
+      >
         {failed ? (
           <span className="sponsor-card__fallback">{sponsor.name}</span>
         ) : (

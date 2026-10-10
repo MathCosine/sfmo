@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 /**
  * A stepped, pixel-art wave used as the divider between sections.
  * Deliberately blocky: it ties the pixel display type to the sea theme and
@@ -28,7 +30,10 @@ export function PixelWave({
   flip = false,
   className = '',
 }: Props) {
-  const id = flip ? 'pixel-wave-flip' : 'pixel-wave';
+  // Pattern ids are document-global: with a fixed id, every wave on the page
+  // resolved url(#id) to the FIRST wave's pattern and drew in its colours.
+  // useId gives each instance its own; strip characters that are awkward in url().
+  const id = `pixel-wave-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   return (
     <svg

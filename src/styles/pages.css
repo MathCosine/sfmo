@@ -1778,36 +1778,52 @@
   background: var(--tier-bronze);
 }
 
-/* Each tier sets the logo box its cards draw into: higher tiers get more room. */
+/* Each tier sets the logo box its cards draw into, and how many cards share
+   a row. Flex rows rather than a grid: a full row spans the same total width
+   in every tier, and a partial row (five silver, say) centres itself instead
+   of leaving a card stranded on the left. */
 .sponsor-grid {
-  display: grid;
-  gap: 1.2rem;
+  --gap: 1.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap);
+}
+
+.sponsor-grid > * {
+  flex: 0 1 var(--card-w);
+  min-width: 0;
 }
 
 .sponsor-grid--gold {
   --logo-h: 170px;
   --logo-w: 440px;
-  grid-template-columns: minmax(0, 1fr);
+  --card-w: 100%;
 }
 
-/* Fixed at two across: auto-fit would put four silver cards in one row,
-   each narrower than a bronze card, inverting the tier order. */
 .sponsor-grid--silver {
   --logo-h: 110px;
   --logo-w: 340px;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 680px) {
-  .sponsor-grid--silver {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  --card-w: calc((100% - var(--gap)) / 2);
 }
 
 .sponsor-grid--bronze {
   --logo-h: 64px;
   --logo-w: 200px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 300px));
+  --card-w: calc((100% - 2 * var(--gap)) / 3);
+}
+
+@media (max-width: 860px) {
+  .sponsor-grid--bronze {
+    --card-w: calc((100% - var(--gap)) / 2);
+  }
+}
+
+@media (max-width: 680px) {
+  .sponsor-grid--silver,
+  .sponsor-grid--bronze {
+    --card-w: 100%;
+  }
 }
 
 .sponsor-card {

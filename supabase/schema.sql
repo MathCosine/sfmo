@@ -78,6 +78,23 @@ alter table public.teams add column if not exists media_release boolean not null
 alter table public.teams add column if not exists media_release_signed_by text;
 alter table public.teams add column if not exists media_release_signed_at timestamptz;
 
+-- liability_waiver_*: the captain's confirmation that each competitor's
+--   parent or guardian (or the competitor, if 18 or older) signed the waiver.
+--   The per-competitor signatures live on team_members.
+-- donation_*: the optional suggested donation. Pledge is whole dollars; the
+--   method is how they plan to give; received is ticked by staff.
+-- confirmation_sent_at: set when the confirmation email goes out, so it is
+--   sent at most once (cleared again if sending fails, so it can be retried).
+alter table public.teams add column if not exists liability_waiver boolean not null default false;
+alter table public.teams add column if not exists liability_waiver_signed_by text;
+alter table public.teams add column if not exists liability_waiver_signed_at timestamptz;
+alter table public.teams add column if not exists donation_pledge integer
+  check (donation_pledge is null or donation_pledge between 0 and 99999);
+alter table public.teams add column if not exists donation_method text
+  check (donation_method is null or donation_method in ('zelle', 'online', 'checkin'));
+alter table public.teams add column if not exists donation_received boolean not null default false;
+alter table public.teams add column if not exists confirmation_sent_at timestamptz;
+
 create index if not exists teams_contact_email_idx on public.teams (lower(contact_email));
 create index if not exists teams_status_idx on public.teams (status);
 create index if not exists teams_created_at_idx on public.teams (created_at desc);
@@ -102,6 +119,11 @@ create table if not exists public.team_members (
 create index if not exists team_members_team_id_idx on public.team_members (team_id);
 create unique index if not exists team_members_competitor_id_idx
   on public.team_members (competitor_id);
+
+-- The parent or guardian who signed this competitor's liability waiver (the
+-- competitor's own name if 18 or older), and an address to confirm it to.
+alter table public.team_members add column if not exists guardian_name text;
+alter table public.team_members add column if not exists guardian_email text;
 
 -- Keep competitor_id in sync with the parent team's code, however the row
 -- was created (registration RPC, staff edit, or manual SQL).
@@ -248,8 +270,11 @@ create policy "admins manage directory"
 --     "coach_name": "...", "coach_email": "...", "notes": "...",
 --     "division": "in_person" | "online", "distance_attested": true,
 --     "media_release": true, "media_release_signed_by": "<captain's full name>",
+--     "liability_waiver": true,
+--     "donation_pledge": 20, "donation_method": "zelle" | "online" | "checkin",
 --     "agreed_policies": true,
---     "members": [ { "full_name": "...", "email": "...", "grade": "9", "school": "..." } ]
+--     "members": [ { "full_name": "...", "email": "...", "grade": "9", "school": "...",
+--                    "guardian_name": "...", "guardian_email": "..." } ]
 --   }
 --
 -- Returns { team_code, team_name, status, members: [{ slot, competitor_id, full_name }] }
@@ -271,6 +296,9 @@ declare
   team_name     text := btrim(coalesce(payload ->> 'team_name', ''));
   division      text := btrim(coalesce(payload ->> 'division', ''));
   signer        text := btrim(coalesce(payload ->> 'media_release_signed_by', ''));
+  pledge_text   text := btrim(coalesce(payload ->> 'donation_pledge', ''));
+  pledge        integer;
+  method        text := nullif(btrim(coalesce(payload ->> 'donation_method', '')), '');
   existing      integer;
 begin
   select * into settings from public.site_settings where id = 1;
@@ -327,6 +355,39 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- Liability waiver: a parent or guardian signs for each competitor (the
+  -- competitor themselves if 18 or older), then the captain confirms it for
+  -- the team. Checked before anything is written.
+  if exists (
+    select 1 from jsonb_array_elements(members) m
+    where btrim(coalesce(m ->> 'guardian_name', '')) = ''
+       or btrim(coalesce(m ->> 'guardian_email', '')) !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+  ) then
+    raise exception 'Every competitor needs a parent or guardian''s name and email for the liability waiver.'
+      using errcode = 'P0001';
+  end if;
+
+  if coalesce((payload ->> 'liability_waiver')::boolean, false) is not true then
+    raise exception 'The team captain must confirm the liability waiver.' using errcode = 'P0001';
+  end if;
+
+  -- Suggested donation: optional, so blank means none. Whole dollars only.
+  if pledge_text <> '' then
+    if pledge_text !~ '^[0-9]{1,5}$' then
+      raise exception 'The donation amount must be a whole number of dollars.' using errcode = 'P0001';
+    end if;
+    pledge := pledge_text::integer;
+  end if;
+
+  if coalesce(pledge, 0) = 0 then
+    method := null;
+  elsif method is null or method not in ('zelle', 'online', 'checkin') then
+    raise exception 'Choose how you plan to give: Zelle, online, or at check-in.' using errcode = 'P0001';
+  elsif method = 'checkin' and division = 'online' then
+    raise exception 'Online teams have no check-in, so please give by Zelle or online instead.'
+      using errcode = 'P0001';
+  end if;
+
   if coalesce((payload ->> 'agreed_policies')::boolean, false) is not true then
     raise exception 'You must agree to the competition policies.' using errcode = 'P0001';
   end if;
@@ -345,7 +406,9 @@ begin
     team_name, division, school, city, state_region, country,
     contact_name, contact_email, contact_phone,
     coach_name, coach_email, notes, agreed_policies,
-    distance_attested, media_release, media_release_signed_by, media_release_signed_at
+    distance_attested, media_release, media_release_signed_by, media_release_signed_at,
+    liability_waiver, liability_waiver_signed_by, liability_waiver_signed_at,
+    donation_pledge, donation_method
   )
   values (
     team_name,
@@ -364,7 +427,12 @@ begin
     division = 'online',
     true,
     signer,
-    now()
+    now(),
+    true,
+    signer,
+    now(),
+    pledge,
+    method
   )
   returning * into new_team;
 
@@ -375,14 +443,17 @@ begin
       raise exception 'Every team member needs a name.' using errcode = 'P0001';
     end if;
 
-    insert into public.team_members (team_id, slot, full_name, email, grade, school)
+    insert into public.team_members
+      (team_id, slot, full_name, email, grade, school, guardian_name, guardian_email)
     values (
       new_team.id,
       slot_letters[idx],
       btrim(member ->> 'full_name'),
       nullif(btrim(coalesce(member ->> 'email', '')), ''),
       nullif(btrim(coalesce(member ->> 'grade', '')), ''),
-      nullif(btrim(coalesce(member ->> 'school', '')), '')
+      nullif(btrim(coalesce(member ->> 'school', '')), ''),
+      btrim(member ->> 'guardian_name'),
+      btrim(member ->> 'guardian_email')
     );
   end loop;
 
@@ -405,6 +476,8 @@ as $$
     'status', t.status,
     'contact_email', t.contact_email,
     'created_at', t.created_at,
+    'donation_pledge', t.donation_pledge,
+    'donation_method', t.donation_method,
     'members', coalesce(
       (
         select jsonb_agg(
@@ -456,6 +529,58 @@ $$;
 revoke all on function public.team_receipt(uuid) from public, anon, authenticated;
 grant execute on function public.register_team(jsonb) to anon, authenticated;
 grant execute on function public.lookup_team(text, text) to anon, authenticated;
+
+-- Called only by the send-confirmation Edge Function, with the service role.
+-- Atomically claims a team's one confirmation email: returns everything the
+-- email needs and stamps confirmation_sent_at, or returns null if the team is
+-- unknown, the email does not match, or a confirmation already went out.
+-- Requiring team code + contact email (the same pair lookup_team uses) means
+-- a caller can only ever trigger an email to a team's own registered contact.
+create or replace function public.claim_confirmation(p_team_code text, p_contact_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  claimed public.teams;
+begin
+  update public.teams
+  set confirmation_sent_at = now()
+  where team_code = lpad(btrim(p_team_code), 2, '0')
+    and lower(contact_email) = lower(btrim(p_contact_email))
+    and status <> 'cancelled'
+    and confirmation_sent_at is null
+  returning * into claimed;
+
+  if claimed.id is null then
+    return null;
+  end if;
+
+  return public.team_receipt(claimed.id) || jsonb_build_object(
+    'contact_name', claimed.contact_name,
+    'coach_email', claimed.coach_email,
+    'guardians', coalesce(
+      (
+        select jsonb_agg(
+          jsonb_build_object(
+            'competitor_id', m.competitor_id,
+            'competitor_name', m.full_name,
+            'guardian_name', m.guardian_name,
+            'guardian_email', m.guardian_email
+          ) order by m.slot
+        )
+        from public.team_members m
+        where m.team_id = claimed.id and m.guardian_email is not null
+      ),
+      '[]'::jsonb
+    )
+  );
+end;
+$$;
+
+revoke all on function public.claim_confirmation(text, text) from public, anon, authenticated;
+grant execute on function public.claim_confirmation(text, text) to service_role;
 grant execute on function public.is_staff() to authenticated;
 grant execute on function public.is_admin() to authenticated;
 
@@ -488,7 +613,9 @@ select
           'competitor_id', m.competitor_id,
           'full_name', m.full_name,
           'email', m.email,
-          'grade', m.grade
+          'grade', m.grade,
+          'guardian_name', m.guardian_name,
+          'guardian_email', m.guardian_email
         ) order by m.slot
       )
       from public.team_members m
@@ -499,5 +626,12 @@ select
   t.distance_attested,
   t.media_release,
   t.media_release_signed_by,
-  t.media_release_signed_at
+  t.media_release_signed_at,
+  t.liability_waiver,
+  t.liability_waiver_signed_by,
+  t.liability_waiver_signed_at,
+  t.donation_pledge,
+  t.donation_method,
+  t.donation_received,
+  t.confirmation_sent_at
 from public.teams t;

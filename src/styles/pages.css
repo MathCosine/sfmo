@@ -1753,6 +1753,10 @@
   color: var(--kelp-deep);
 }
 
+.staff__copied--warn {
+  color: var(--coral);
+}
+
 .staff__giving {
   margin: -0.4rem 0 1.2rem;
   font-size: 0.8rem;
@@ -2120,6 +2124,29 @@
 /* --------------------------------------------------------------------------
    Suggested donation
    -------------------------------------------------------------------------- */
+
+.give-optional {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.93rem;
+  line-height: 1.55;
+  background: color-mix(in srgb, var(--kelp) 14%, var(--paper));
+  border: 2px solid color-mix(in srgb, var(--kelp-deep) 60%, transparent);
+  border-radius: 10px;
+}
+
+.give-optional a {
+  font-weight: 700;
+}
+
+.receipt__optional {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
 
 .give-picker {
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));

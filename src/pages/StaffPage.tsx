@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { SeoHead } from '../components/SeoHead';
 import { DIVISIONS, links, type Division } from '../lib/config';
-import { sendConfirmation, type DonationMethod } from '../lib/registration';
+import { sendConfirmation, sendTestEmail, type DonationMethod } from '../lib/registration';
 import { isSupabaseConfigured, readErrorMessage, supabase } from '../lib/supabase';
 
 type RosterMember = {
@@ -261,6 +261,14 @@ function Dashboard({ session }: { session: Session }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState<{ busy: boolean; sent?: boolean; message?: string }>({
+    busy: false,
+  });
+
+  async function runTestEmail() {
+    setTestEmail({ busy: true });
+    setTestEmail({ busy: false, ...(await sendTestEmail()) });
+  }
 
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -607,8 +615,26 @@ function Dashboard({ session }: { session: Session }) {
           <button type="button" className="btn btn--kelp" onClick={() => void setAllStatus('confirmed')}>
             Confirm all in view
           </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={testEmail.busy}
+            onClick={() => void runTestEmail()}
+            title="Sends sample copies of both confirmation emails to you only"
+          >
+            {testEmail.busy ? 'Sending…' : 'Send me a test email'}
+          </button>
         </div>
         {copied && <p className="staff__copied mono">{copied}</p>}
+        {testEmail.message && (
+          <p
+            className={`staff__copied mono ${testEmail.sent ? '' : 'staff__copied--warn'}`}
+            role="status"
+          >
+            {testEmail.sent ? '✓ ' : 'Test email failed: '}
+            {testEmail.message}
+          </p>
+        )}
       </div>
 
       <div className="staff__filters">

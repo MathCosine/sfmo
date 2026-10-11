@@ -196,9 +196,10 @@ On the free plan (no card):
 
    With the Supabase CLI instead:
    `supabase functions deploy send-confirmation --no-verify-jwt`.
-6. **Test.** Register a test team with your own email, or sign in at
-   `/staff`, expand a team and press **Send now**. **Check your spam folder**
-   on the first one: a brand-new sending address sometimes lands there, and
+6. **Test.** Sign in at `/staff` and press **Send me a test email**. It
+   sends sample copies of both emails (marked `[TEST]`) to you only, works
+   while registration is closed, and touches no data. **Check your spam
+   folder** on the first one: a brand-new sending address sometimes lands there, and
    marking it "not spam" helps. If it fails, the function's **Logs** tab in
    Supabase says why (usually a key or inbox address pasted with a typo).
 

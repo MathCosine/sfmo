@@ -156,6 +156,32 @@ export async function sendConfirmation(teamCode: string, contactEmail: string): 
   }
 }
 
+/**
+ * Staff only: sends sample copies of both confirmation emails to the
+ * signed-in staff member, to check the email setup while registration is
+ * closed. Writes nothing to the database.
+ */
+export async function sendTestEmail(): Promise<{ sent: boolean; message: string }> {
+  const client = requireSupabase();
+  const { data, error } = await client.functions.invoke('send-confirmation', {
+    body: { test: true },
+  });
+  if (!error && data?.sent) {
+    return { sent: true, message: `Sent ${data.emails} test emails to ${data.to}. Check your inbox and spam folder.` };
+  }
+  let detail: string = data?.error ?? error?.message ?? 'Unknown error.';
+  // A non-2xx reply arrives as an error whose context is the raw response.
+  const response = (error as { context?: unknown } | null)?.context;
+  if (response instanceof Response) {
+    try {
+      detail = (await response.json())?.error ?? detail;
+    } catch {
+      /* not JSON — keep the generic message */
+    }
+  }
+  return { sent: false, message: detail };
+}
+
 export function emptyMember(): MemberInput {
   return { full_name: '', email: '', grade: '', school: '', guardian_name: '', guardian_email: '' };
 }

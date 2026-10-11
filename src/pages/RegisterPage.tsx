@@ -34,13 +34,13 @@ const WHAT_WE_ASK = [
   `Up to ${sfmo2027.maxTeamSize} competitors — name, grade, and email for each`,
   'One contact person we can reach about logistics',
   'A media release and a liability waiver, signed by your team captain — plus the name and email of each competitor\'s parent or guardian, who signs the waiver for them',
-  `An optional donation — we suggest $${donation.perCompetitor} per competitor`,
+  `A completely optional donation — we suggest $${donation.perCompetitor} per competitor, and every team is welcome either way`,
   'Agreement to the competition policies, published before registration opens',
 ];
 
 const METHODS: Record<DonationMethod, { label: string; detail: string }> = {
   zelle: { label: 'Zelle', detail: donation.zelle },
-  online: { label: 'Online', detail: 'By card, through SF Math Academy' },
+  online: { label: 'Online', detail: 'By card, on our academy\'s donation page' },
   checkin: { label: 'At check-in', detail: 'On competition day' },
 };
 
@@ -128,11 +128,11 @@ function DonationWays({
             )}
             {method === 'online' && (
               <>
-                Give at{' '}
+                Give on our academy&apos;s donation page,{' '}
                 <a href={donation.portal} target="_blank" rel="noreferrer">
                   {donation.portalLabel}
-                </a>{' '}
-                and add &ldquo;Team {teamCode}&rdquo; after your name.
+                </a>
+                , and add &ldquo;Team {teamCode}&rdquo; after your name.
               </>
             )}
             {method === 'checkin' && <>Bring it to check-in on competition day.</>}
@@ -202,8 +202,13 @@ function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState 
         <h3 className="receipt__give-title">
           {pledged
             ? `Thank you for pledging $${receipt.donation_pledge}`
-            : `Suggested donation: $${donation.perCompetitor} per competitor, optional`}
+            : `Suggested donation (optional): $${donation.perCompetitor} per competitor`}
         </h3>
+        <p className="receipt__optional">
+          {pledged
+            ? 'It is still completely optional — if plans change, there is no need to tell us.'
+            : 'Completely optional. Your team is fully registered whether or not you give.'}
+        </p>
         <DonationWays
           teamCode={receipt.team_code}
           division={receipt.division}
@@ -671,11 +676,22 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend label">5 · Suggested donation</legend>
-        <p className="field__hint reg-form__hint">
-          Entry is free. We suggest ${donation.perCompetitor} per competitor to help cover the venue
-          — give what works for you, or nothing at all. Every team is welcome either way.
-        </p>
+        <legend className="reg-form__legend label">5 · Suggested donation (optional)</legend>
+        <div className="give-optional">
+          <p>
+            <strong>Giving is completely optional.</strong> Entry is free, and every team is
+            equally welcome whether or not you give — choosing &ldquo;Not this time&rdquo; changes
+            nothing about your registration.
+          </p>
+          <p>
+            If you would like to help cover the venue, we suggest ${donation.perCompetitor} per
+            competitor: by Zelle, at check-in, or online on our academy&apos;s donation page,{' '}
+            <a href={donation.portal} target="_blank" rel="noreferrer">
+              {donation.portalLabel}
+            </a>
+            .
+          </p>
+        </div>
         <div className="division-picker give-picker" role="radiogroup" aria-label="Donation">
           {(
             [
@@ -685,7 +701,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
                 `Suggested: $${donation.perCompetitor} × ${form.members.length} competitor${form.members.length === 1 ? '' : 's'}`,
               ],
               ['other', 'Another amount', 'Any whole number of dollars'],
-              ['none', 'Not this time', 'Entry stays free'],
+              ['none', 'Not this time', 'Totally fine — entry is free'],
             ] as const
           ).map(([key, label, detail]) => (
             <label
@@ -757,8 +773,8 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
                 ))}
             </div>
             <p className="field__hint reg-form__rule">
-              Nothing is charged here. Your confirmation shows exactly how to give, with your team ID
-              to put in the memo.
+              Nothing is charged here, and you are not committing to anything. Your confirmation
+              shows exactly how to give, with your team ID to put in the memo.
             </p>
           </>
         )}

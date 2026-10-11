@@ -121,7 +121,7 @@ Full walkthrough in [`supabase/README.md`](supabase/README.md). Short version:
 4. In GitHub: Settings → Secrets and variables → Actions → **Secrets** tab →
    add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 5. Re-run the deploy workflow.
-6. Optional but recommended: confirmation emails, sent from sfmathopen@gmail.com
+6. Optional but recommended: confirmation emails (an AgentMail key, about 5 minutes)
    ([`supabase/README.md` §7](supabase/README.md#7-confirmation-emails)).
 
 The **Keep Supabase awake** workflow then queries the project every Monday

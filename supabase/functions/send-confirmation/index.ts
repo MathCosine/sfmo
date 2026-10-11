@@ -14,7 +14,10 @@
 // (Edge Functions → Deploy a new function → Via Editor) and it runs as-is.
 //
 // Secrets (Dashboard → Edge Functions → Secrets). Set ONE way of sending:
-//   Gmail, from sfmathopen@gmail.com, via supabase/gmail-relay/Code.gs:
+//   AgentMail (simplest — an API key and an inbox, no DNS):
+//     AGENTMAIL_API_KEY   from the AgentMail console
+//     AGENTMAIL_INBOX     the inbox address, e.g. sfmo2027@agentmail.to
+//   or Gmail, from sfmathopen@gmail.com, via supabase/gmail-relay/Code.gs:
 //     EMAIL_RELAY_URL     the Apps Script web app URL (ends in /exec)
 //     EMAIL_RELAY_SECRET  printed by the script's setup()
 //   or Resend, from a domain you have verified there:
@@ -200,6 +203,26 @@ export type Message = { to: string; cc?: string; subject: string; text: string; 
 
 const SENDER_NAME = 'SFMO 2027';
 
+/**
+ * AgentMail. It has no batch endpoint, so the team's emails go one by one;
+ * replies are pointed at REPLY_TO rather than the AgentMail inbox.
+ */
+async function sendViaAgentMail(messages: Message[], replyTo: string) {
+  const key = env('AGENTMAIL_API_KEY');
+  const inbox = encodeURIComponent(env('AGENTMAIL_INBOX').trim());
+  for (const m of messages) {
+    const res = await fetch(`https://api.agentmail.to/v0/inboxes/${inbox}/messages/send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: m.to, ...(m.cc ? { cc: m.cc } : {}), reply_to: replyTo,
+        subject: m.subject, text: m.text, html: m.html,
+      }),
+    });
+    if (!res.ok) throw new Error(`AgentMail ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  }
+}
+
 /** Gmail, through the Apps Script relay in supabase/gmail-relay/Code.gs. */
 async function sendViaGmail(messages: Message[], replyTo: string) {
   const res = await fetch(env('EMAIL_RELAY_URL'), {
@@ -236,9 +259,10 @@ async function sendViaResend(messages: Message[], replyTo: string) {
 }
 
 function deliver(messages: Message[], replyTo: string) {
+  if (Deno.env.get('AGENTMAIL_API_KEY')) return sendViaAgentMail(messages, replyTo);
   if (Deno.env.get('EMAIL_RELAY_URL')) return sendViaGmail(messages, replyTo);
   if (Deno.env.get('RESEND_API_KEY')) return sendViaResend(messages, replyTo);
-  throw new Error('No way to send email is set up: add EMAIL_RELAY_URL and EMAIL_RELAY_SECRET (Gmail) or RESEND_API_KEY and EMAIL_FROM (Resend) to the function secrets.');
+  throw new Error('No way to send email is set up: add AGENTMAIL_API_KEY and AGENTMAIL_INBOX (or the Gmail relay or Resend secrets) to the function secrets.');
 }
 
 export async function handle(req: Request): Promise<Response> {

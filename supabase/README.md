@@ -156,48 +156,38 @@ contact email, so the endpoint cannot be used to email strangers. If sending
 fails the team is still registered, the page says so, and staff can retry
 from the portal (expand the team → **Send now** / **Resend**).
 
-The emails go out **from sfmathopen@gmail.com**, through a small Google Apps
-Script that lives in that account (`supabase/gmail-relay/Code.gs`), so
-replies land in its inbox.
-A free Gmail account can email **100 recipients a day** this way. A
-registration uses 1 for the contact, 1 for a cc'd coach, and 1 per distinct
-guardian, so at most 6. If a busy day runs out, the relay sends nothing for
-that team and the portal shows "Not sent"; press **Send now** the next day.
+The emails go out through [AgentMail](https://agentmail.to): an API key and
+an inbox, with no DNS or scripts. Replies go to **sfmathopen@gmail.com** (set
+as the reply-to address on every email).
 
-**Setup, once (about 10 minutes).** Do steps 1–4 signed in to Google as
-**sfmathopen@gmail.com**.
+On the free plan (no card):
+* emails come from an `@agentmail.to` address, e.g. `sfmo2027@agentmail.to`,
+  with a small "Sent via AgentMail" footer;
+* you can send **100 emails a day, 3,000 a month**. A registration sends 1
+  for the contact (coach cc'd) plus 1 per distinct guardian, so at most 5. If
+  a day's limit runs out, that team shows "Not sent" in the portal; press
+  **Send now** the next day.
 
-1. **Create the script.** Go to <https://script.google.com> → **New project**.
-   Rename it (top left) to `SFMO email relay`. Replace everything in
-   `Code.gs` with the contents of `supabase/gmail-relay/Code.gs`, and save.
-2. **Allow it to send email.** In the toolbar's function menu choose
-   **setup**, then **Run**. Google asks for permission:
-   **Review permissions** → choose sfmathopen@gmail.com. Because it is your
-   own unpublished script, Google warns "Google hasn't verified this app";
-   click **Advanced → Go to SFMO email relay (unsafe)** → **Allow**. The
-   permission it needs is to send email as you; it cannot read your mail.
-3. **Copy the secret.** The **Execution log** at the bottom now shows
-   `EMAIL_RELAY_SECRET = …`. Copy the long value after the `=`. (Running
-   setup again later shows the same secret.)
-4. **Publish it.** **Deploy → New deployment** → the gear next to "Select
-   type" → **Web app**. Set **Execute as: Me (sfmathopen@gmail.com)** and
-   **Who has access: Anyone** → **Deploy**. Copy the **Web app URL** (it ends
-   in `/exec`).
+**Setup, once (about 5 minutes):**
 
-   "Anyone" is what lets Supabase reach it. It still refuses any request
-   without the secret, and it never sends more than one team's emails per call.
-5. **Function secrets.** Supabase dashboard → **Edge Functions → Secrets**
+1. **Sign up** at <https://agentmail.to> (with sfmathopen@gmail.com).
+2. **Create an inbox** in the AgentMail console. Pick a username such as
+   `sfmo2027`; the address becomes `sfmo2027@agentmail.to`. If it offers a
+   display name, use `SFMO 2027`.
+3. **Create an API key** in the console and copy it. It may only be shown
+   once.
+4. **Function secrets.** Supabase dashboard → **Edge Functions → Secrets**
    (sometimes under Project Settings → Edge Functions). Add:
 
-   | Name                 | Value                                     |
-   | -------------------- | ----------------------------------------- |
-   | `EMAIL_RELAY_URL`    | the Web app URL from step 4               |
-   | `EMAIL_RELAY_SECRET` | the secret from step 3                    |
-   | `SITE_URL`           | optional; defaults to `https://mathcosine.github.io/sfmo/`. Update it when you move to sfmathopen.org |
+   | Name                | Value                                      |
+   | ------------------- | ------------------------------------------ |
+   | `AGENTMAIL_API_KEY` | the key from step 3                        |
+   | `AGENTMAIL_INBOX`   | the inbox address, e.g. `sfmo2027@agentmail.to` |
+   | `SITE_URL`          | optional; defaults to `https://mathcosine.github.io/sfmo/`. Update it when you move to sfmathopen.org |
 
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to every
    function automatically. Never copy the service-role key anywhere else.
-6. **Deploy the function.** **Edge Functions → Deploy a new function → Via
+5. **Deploy the function.** **Edge Functions → Deploy a new function → Via
    Editor.** Name it exactly `send-confirmation`, replace the sample code with
    the whole of `supabase/functions/send-confirmation/index.ts`, and deploy.
    Then open the function's settings and turn **off** JWT verification ("Verify
@@ -206,26 +196,57 @@ that team and the portal shows "Not sent"; press **Send now** the next day.
 
    With the Supabase CLI instead:
    `supabase functions deploy send-confirmation --no-verify-jwt`.
-7. **Test.** Sign in at `/staff`, expand any team, and press **Send now**, or
-   register a test team with your own email. If it fails, the function's
-   **Logs** tab in Supabase says why. The usual causes are a secret pasted with
-   a stray space, or the web app not set to **Anyone**.
+6. **Test.** Register a test team with your own email, or sign in at
+   `/staff`, expand a team and press **Send now**. **Check your spam folder**
+   on the first one: a brand-new sending address sometimes lands there, and
+   marking it "not spam" helps. If it fails, the function's **Logs** tab in
+   Supabase says why (usually a key or inbox address pasted with a typo).
 
-**If you change `Code.gs` later**, saving is not enough: **Deploy → Manage
+### Alternative: send from sfmathopen@gmail.com itself
+
+More setup, but the emails come from the Gmail address with no footer. A
+free Gmail account can email **100 recipients a day** this way (a cc'd coach
+counts). Supabase cannot connect to Gmail's mail servers directly, so a small
+Google Apps Script in that account does the sending
+(`supabase/gmail-relay/Code.gs`). Remove the two `AGENTMAIL_` secrets if you
+switch, because AgentMail is used whenever its key is set.
+
+Signed in to Google as sfmathopen@gmail.com:
+
+1. <https://script.google.com> → **New project**, rename it `SFMO email
+   relay`, replace everything in `Code.gs` with
+   `supabase/gmail-relay/Code.gs`, and save.
+2. In the toolbar's function menu choose **setup** → **Run** → **Review
+   permissions** → sfmathopen@gmail.com. Google warns "Google hasn't verified
+   this app" because it is your own script: **Advanced → Go to SFMO email
+   relay (unsafe)** → **Allow**. It needs permission to send email as you; it
+   cannot read your mail.
+3. The **Execution log** shows `EMAIL_RELAY_SECRET = …`. Copy the value.
+4. **Deploy → New deployment** → gear → **Web app**, **Execute as: Me**,
+   **Who has access: Anyone** → **Deploy**, and copy the **Web app URL**
+   (ends in `/exec`). It refuses any request without the secret, and sends at
+   most one team's emails per call.
+5. In Supabase, add secrets `EMAIL_RELAY_URL` (the URL) and
+   `EMAIL_RELAY_SECRET` (the secret), then deploy and test the function as in
+   steps 5–6 above.
+
+If you change `Code.gs` later, saving is not enough: **Deploy → Manage
 deployments →** pencil icon → Version: **New version** → **Deploy**. The URL
 stays the same.
 
-**Keep the secret private.** Anyone holding it could send email from
+Keep the relay secret private: anyone holding it could send email from
 sfmathopen@gmail.com. If it ever leaks, delete the `RELAY_SECRET` property
 (Apps Script → Project Settings → Script properties), run **setup** again for
 a new one, and update `EMAIL_RELAY_SECRET` in Supabase.
 
-**Alternative: Resend.** To send from an address on your own domain instead
+### Alternative: Resend, from your own domain
+
+To send from an address on your own domain instead
 (e.g. `registration@sfmathopen.org` once you own it), create a
 [Resend](https://resend.com) account, verify the domain with the DNS records
 it gives you, create an API key, and set `RESEND_API_KEY` and `EMAIL_FROM`
-(e.g. `SFMO 2027 <registration@sfmathopen.org>`) instead of the two relay
-secrets. If both are set, Gmail is used.
+(e.g. `SFMO 2027 <registration@sfmathopen.org>`), and remove the AgentMail
+secrets. If several are set, AgentMail wins, then Gmail, then Resend.
 
 The email wording lives in `index.ts` and repeats the donation details from
 `src/lib/config.ts` (the function cannot import site code), so change both

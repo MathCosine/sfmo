@@ -77,10 +77,7 @@ function WaiverDocs() {
   );
 }
 
-/**
- * The Zelle QR code, shown only once public/brand/zelle-qr.png exists. Zelle's
- * export is mostly white margin, so the thumbnail opens the full image to scan.
- */
+/** The Zelle QR code (public/brand/zelle-qr.png); hidden if the file is missing. */
 function ZelleQr() {
   const [missing, setMissing] = useState(false);
   if (missing) return null;
@@ -90,12 +87,12 @@ function ZelleQr() {
       <img
         src={src}
         alt={`Zelle QR code for ${donation.zelle}`}
-        width={132}
-        height={132}
+        width={150}
+        height={150}
         loading="lazy"
         onError={() => setMissing(true)}
       />
-      <span className="give-ways__qr-hint">Open to scan</span>
+      <span className="give-ways__qr-hint">Tap to enlarge</span>
     </a>
   );
 }

@@ -2186,8 +2186,8 @@
 }
 
 .give-ways__qr img {
-  width: 132px;
-  height: 132px;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
   background: #fff;
   border: 2px solid var(--ink);

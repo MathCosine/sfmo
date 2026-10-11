@@ -7,18 +7,22 @@
 //      once — so this endpoint can never be used to email arbitrary people or
 //      to spam a team;
 //   2. sends the team's confirmation to its contact (coach cc'd), plus a short
-//      notice to each parent/guardian named on the liability waiver, through
-//      Resend's batch API;
+//      notice to each parent/guardian named on the liability waiver;
 //   3. on any send failure, releases the claim so it can be retried.
 //
 // No imports on purpose: paste this file into the Supabase dashboard editor
 // (Edge Functions → Deploy a new function → Via Editor) and it runs as-is.
 //
-// Secrets (Dashboard → Edge Functions → Secrets):
-//   RESEND_API_KEY  required  re_...
-//   EMAIL_FROM      required  e.g.  SFMO 2027 <registration@sfmathacademy.com>
-//   REPLY_TO        optional  default sfmathopen@gmail.com
-//   SITE_URL        optional  default https://mathcosine.github.io/sfmo/
+// Secrets (Dashboard → Edge Functions → Secrets). Set ONE way of sending:
+//   Gmail, from sfmathopen@gmail.com, via supabase/gmail-relay/Code.gs:
+//     EMAIL_RELAY_URL     the Apps Script web app URL (ends in /exec)
+//     EMAIL_RELAY_SECRET  printed by the script's setup()
+//   or Resend, from a domain you have verified there:
+//     RESEND_API_KEY      re_...
+//     EMAIL_FROM          e.g.  SFMO 2027 <registration@sfmathopen.org>
+// Optional either way:
+//   REPLY_TO            default sfmathopen@gmail.com
+//   SITE_URL            default https://mathcosine.github.io/sfmo/
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 //
 // Deploy with "Verify JWT" turned OFF: the page calls this with the public
@@ -191,13 +195,50 @@ export function guardianEmails(c: Claim, siteUrl: string) {
   });
 }
 
-async function sendBatch(messages: Array<Record<string, unknown>>) {
+/** One email, whichever way it is delivered. */
+export type Message = { to: string; cc?: string; subject: string; text: string; html: string };
+
+const SENDER_NAME = 'SFMO 2027';
+
+/** Gmail, through the Apps Script relay in supabase/gmail-relay/Code.gs. */
+async function sendViaGmail(messages: Message[], replyTo: string) {
+  const res = await fetch(env('EMAIL_RELAY_URL'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      secret: env('EMAIL_RELAY_SECRET'),
+      messages: messages.map((m) => ({ ...m, name: SENDER_NAME, replyTo })),
+    }),
+    redirect: 'follow', // Apps Script answers via a redirect to its output
+  });
+  const text = await res.text();
+  let result: { ok?: boolean; error?: string } = {};
+  try {
+    result = JSON.parse(text);
+  } catch { /* Google served an HTML error page */ }
+  if (!res.ok || result.ok !== true) {
+    throw new Error(`Gmail relay: ${result.error ?? `${res.status} ${text.slice(0, 200)}`}`);
+  }
+}
+
+/** Resend's batch API, for sending from a verified domain instead. */
+async function sendViaResend(messages: Message[], replyTo: string) {
+  const from = env('EMAIL_FROM');
   const res = await fetch('https://api.resend.com/emails/batch', {
     method: 'POST',
     headers: { Authorization: `Bearer ${env('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(messages),
+    body: JSON.stringify(messages.map((m) => ({
+      from, reply_to: replyTo, to: [m.to], ...(m.cc ? { cc: [m.cc] } : {}),
+      subject: m.subject, html: m.html, text: m.text,
+    }))),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
+}
+
+function deliver(messages: Message[], replyTo: string) {
+  if (Deno.env.get('EMAIL_RELAY_URL')) return sendViaGmail(messages, replyTo);
+  if (Deno.env.get('RESEND_API_KEY')) return sendViaResend(messages, replyTo);
+  throw new Error('No way to send email is set up: add EMAIL_RELAY_URL and EMAIL_RELAY_SECRET (Gmail) or RESEND_API_KEY and EMAIL_FROM (Resend) to the function secrets.');
 }
 
 export async function handle(req: Request): Promise<Response> {
@@ -223,23 +264,22 @@ export async function handle(req: Request): Promise<Response> {
   // Unknown team, wrong email, or already sent: say nothing more.
   if (!claimed) return json(200, { sent: false, reason: 'nothing to send' });
 
-  const from = env('EMAIL_FROM');
   const replyTo = env('REPLY_TO', 'sfmathopen@gmail.com');
   const site = env('SITE_URL', 'https://mathcosine.github.io/sfmo/');
   const team = teamEmail(claimed, site);
   const coach = claimed.coach_email?.trim();
-  const messages = [
+  const messages: Message[] = [
     {
-      from, reply_to: replyTo, to: [claimed.contact_email], subject: team.subject, html: team.html, text: team.text,
-      ...(coach && coach.toLowerCase() !== claimed.contact_email.toLowerCase() ? { cc: [coach] } : {}),
+      to: claimed.contact_email, subject: team.subject, html: team.html, text: team.text,
+      ...(coach && coach.toLowerCase() !== claimed.contact_email.toLowerCase() ? { cc: coach } : {}),
     },
-    ...guardianEmails(claimed, site).map((g) => ({
-      from, reply_to: replyTo, to: [g.to], subject: g.subject, html: g.html, text: g.text,
-    })),
+    ...guardianEmails(claimed, site).map((g) => ({ to: g.to, subject: g.subject, html: g.html, text: g.text })),
   ];
 
+  // Everything that can fail — including a missing secret — happens in here,
+  // so the claim is always released for a retry.
   try {
-    await sendBatch(messages);
+    await deliver(messages, replyTo);
   } catch (error) {
     await release(claimed.team_code); // let it be retried
     return json(502, { sent: false, error: String(error) });

@@ -85,6 +85,12 @@
   box-shadow: var(--shadow-lg);
 }
 
+.btn--sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.74rem;
+  box-shadow: var(--shadow-sm);
+}
+
 .btn--ghost {
   background: transparent;
   box-shadow: none;

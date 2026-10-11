@@ -6,7 +6,13 @@ export type MemberInput = {
   email: string;
   grade: string;
   school: string;
+  /** Parent or guardian who signed this competitor's liability waiver (the
+   * competitor themself if 18 or older). Their typed name is the signature. */
+  guardian_name: string;
+  guardian_email: string;
 };
+
+export type DonationMethod = 'zelle' | 'online' | 'checkin';
 
 export type TeamInput = {
   team_name: string;
@@ -16,8 +22,14 @@ export type TeamInput = {
   distance_attested: boolean;
   /** The captain's media release, given for the whole team. */
   media_release: boolean;
-  /** Captain's typed signature; must match a competitor's name on the roster. */
+  /** Captain's typed signature; must match a competitor's name on the roster.
+   * The same signature confirms the liability waiver. */
   media_release_signed_by: string;
+  /** Captain confirms every competitor's guardian has signed the waiver. */
+  liability_waiver: boolean;
+  /** Whole dollars; null when the team chose not to pledge. Optional. */
+  donation_pledge: number | null;
+  donation_method: DonationMethod | null;
   school: string;
   city: string;
   state_region: string;
@@ -46,6 +58,8 @@ export type TeamReceipt = {
   status: string;
   contact_email: string;
   created_at: string;
+  donation_pledge: number | null;
+  donation_method: DonationMethod | null;
   members: ReceiptMember[];
 };
 
@@ -124,8 +138,26 @@ export async function lookupTeam(teamCode: string, contactEmail: string): Promis
   return data as TeamReceipt;
 }
 
+/**
+ * Asks the send-confirmation Edge Function to email the team and each
+ * guardian. It only sends once per team, and only for a matching team ID and
+ * contact email, so calling it again is harmless. Never throws: registration
+ * has already succeeded, and the email is a courtesy on top.
+ */
+export async function sendConfirmation(teamCode: string, contactEmail: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { data, error } = await supabase.functions.invoke('send-confirmation', {
+      body: { team_code: teamCode, contact_email: contactEmail },
+    });
+    return !error && Boolean(data?.sent);
+  } catch {
+    return false;
+  }
+}
+
 export function emptyMember(): MemberInput {
-  return { full_name: '', email: '', grade: '', school: '' };
+  return { full_name: '', email: '', grade: '', school: '', guardian_name: '', guardian_email: '' };
 }
 
 export function emptyTeam(): TeamInput {
@@ -135,6 +167,9 @@ export function emptyTeam(): TeamInput {
     distance_attested: false,
     media_release: false,
     media_release_signed_by: '',
+    liability_waiver: false,
+    donation_pledge: null,
+    donation_method: null,
     school: '',
     city: '',
     state_region: '',

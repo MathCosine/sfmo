@@ -24,6 +24,21 @@ export const links = {
 } as const;
 
 /**
+ * The optional donation asked for at registration. Entry stays free.
+ * supabase/functions/send-confirmation/index.ts repeats these values in the
+ * confirmation email (it cannot import from here) — change both together.
+ */
+export const donation = {
+  /** Suggested per competitor; a team's suggestion is this times its size. */
+  perCompetitor: 10,
+  zelle: '(925) 997-8182',
+  portal: 'https://sfmathacademy.com/donate',
+  portalLabel: 'sfmathacademy.com/donate',
+  /** Drop a Zelle QR code here and it appears on the registration receipt. */
+  qrImage: 'brand/zelle-qr.png',
+} as const;
+
+/**
  * SFMO 2027 — the event the whole landing page is about.
  * `registrationOpensAt` gates the registration form; before it, the form
  * renders in a locked state with the date. It is compared in UTC.
@@ -178,7 +193,7 @@ export const venueMinutes = daySchedule.reduce((sum, segment) => sum + segment.m
 export const faq = [
   {
     q: 'How much does it cost?',
-    a: 'Nothing. Every contest we have run has been free to enter, and SFMO 2027 is no exception. Our sponsors and the proceeds from our Academy\'s tutoring and camps fund the prizes instead of entry fees.',
+    a: 'Nothing. Every contest we have run has been free to enter, and SFMO 2027 is no exception. Our sponsors and the proceeds from our Academy\'s tutoring and camps fund the prizes instead of entry fees. When you register we suggest an optional $10 donation per competitor to help cover the venue — give what works for you, or nothing at all.',
   },
   {
     q: 'Do I need a full team of four?',

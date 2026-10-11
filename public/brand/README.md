@@ -1,13 +1,15 @@
 # Brand assets
 
-The nav and footer use a pixel-art version of the SFMO bridge mark, drawn in
-code at `src/components/Logo.tsx`. It stays crisp at any size and follows the
-light/dark theme, which a thin line-art PNG cannot do at 30px.
+Files here go live by committing them under these exact names — no code
+change needed.
 
-If you want the original full-colour logo used anywhere it has room to
-breathe — social share image, print, a large lockup — drop it in here as:
+    public/brand/sfmo-logo.png   the full-colour SFMO logo: favicon and
+                                 social share image (square, >=512px)
+    public/brand/zelle-qr.png    optional Zelle QR code for (925) 997-8182.
+                                 Appears next to the Zelle instructions on the
+                                 registration form's receipt. Square PNG,
+                                 ~400px; until it exists, nothing shows.
 
-    public/brand/sfmo-logo.png     (square, transparent background, >=512px)
-
-Then tell me and I will wire it into the OG/share image and the favicon.
-Right now the favicon and share image are the submarine.
+The nav and footer use a pixel-art version of the bridge mark, drawn in code
+at `src/components/Logo.tsx`, so it stays crisp at 30px and follows the
+light/dark theme.

@@ -3,10 +3,12 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { asset } from '../lib/asset';
+import { LIABILITY_WAIVER, MEDIA_RELEASE } from '../data/waivers';
 import {
   DIVISIONS,
   IN_PERSON_RADIUS_MILES,
   distanceRule,
+  donation,
   links,
   sfmo2027,
   type Division,
@@ -18,6 +20,8 @@ import {
   isWindowOpenNow,
   lookupTeam,
   registerTeam,
+  sendConfirmation,
+  type DonationMethod,
   type RegistrationWindow,
   type TeamInput,
   type TeamReceipt,
@@ -29,16 +33,123 @@ const WHAT_WE_ASK = [
   'A team name, and the school or club you are representing',
   `Up to ${sfmo2027.maxTeamSize} competitors — name, grade, and email for each`,
   'One contact person we can reach about logistics',
-  'A media release, signed by your team captain on behalf of the whole team',
+  'A media release and a liability waiver, signed by your team captain — plus the name and email of each competitor\'s parent or guardian, who signs the waiver for them',
+  `An optional donation — we suggest $${donation.perCompetitor} per competitor`,
   'Agreement to the competition policies, published before registration opens',
 ];
+
+const METHODS: Record<DonationMethod, { label: string; detail: string }> = {
+  zelle: { label: 'Zelle', detail: donation.zelle },
+  online: { label: 'Online', detail: 'By card, through SF Math Academy' },
+  checkin: { label: 'At check-in', detail: 'On competition day' },
+};
+
+type PledgeChoice = '' | 'suggested' | 'other' | 'none';
+type EmailState = 'sending' | 'sent' | 'failed';
 
 /** Same normalisation register_team() applies server-side. */
 function normaliseName(name: string) {
   return name.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function Receipt({ receipt }: { receipt: TeamReceipt }) {
+/** Both documents, in full. Text lives in src/data/waivers.ts. */
+function WaiverDocs() {
+  return (
+    <>
+      <h3 className="doc__title">Media release</h3>
+      <div className="release">
+        <p>{MEDIA_RELEASE}</p>
+      </div>
+
+      <h3 className="doc__title">Liability waiver</h3>
+      <div className="release">
+        <p>{LIABILITY_WAIVER.intro}</p>
+        <ol className="doc__clauses">
+          {LIABILITY_WAIVER.clauses.map((clause) => (
+            <li key={clause.title}>
+              <strong>{clause.title}.</strong> {clause.text}
+            </li>
+          ))}
+        </ol>
+        <p>{LIABILITY_WAIVER.signing}</p>
+      </div>
+    </>
+  );
+}
+
+/**
+ * The Zelle QR code, shown only once public/brand/zelle-qr.png exists. Zelle's
+ * export is mostly white margin, so the thumbnail opens the full image to scan.
+ */
+function ZelleQr() {
+  const [missing, setMissing] = useState(false);
+  if (missing) return null;
+  const src = asset(donation.qrImage);
+  return (
+    <a href={src} target="_blank" rel="noreferrer" className="give-ways__qr">
+      <img
+        src={src}
+        alt={`Zelle QR code for ${donation.zelle}`}
+        width={132}
+        height={132}
+        loading="lazy"
+        onError={() => setMissing(true)}
+      />
+      <span className="give-ways__qr-hint">Open to scan</span>
+    </a>
+  );
+}
+
+/** Every way to give, with the team's ID filled in for matching. */
+function DonationWays({
+  teamCode,
+  division,
+  chosen,
+}: {
+  teamCode: string;
+  division: Division | null;
+  chosen: DonationMethod | null;
+}) {
+  const methods = (Object.keys(METHODS) as DonationMethod[]).filter(
+    (method) => method !== 'checkin' || division !== 'online',
+  );
+  return (
+    <ul className="give-ways">
+      {methods.map((method) => (
+        <li
+          key={method}
+          className={`give-ways__item ${chosen === method ? 'give-ways__item--chosen' : ''}`}
+        >
+          <span className="give-ways__label label">{METHODS[method].label}</span>
+          <span className="give-ways__how">
+            {method === 'zelle' && (
+              <>
+                Send to <strong>{donation.zelle}</strong>, with{' '}
+                {`“SFMO 2027 Team ${teamCode}”`} in the memo. Zelle shows the account
+                holder&apos;s personal name rather than SFMO — that&apos;s expected.
+              </>
+            )}
+            {method === 'online' && (
+              <>
+                Give at{' '}
+                <a href={donation.portal} target="_blank" rel="noreferrer">
+                  {donation.portalLabel}
+                </a>{' '}
+                and add &ldquo;Team {teamCode}&rdquo; after your name.
+              </>
+            )}
+            {method === 'checkin' && <>Bring it to check-in on competition day.</>}
+          </span>
+          {method === 'zelle' && <ZelleQr />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState }) {
+  const pledged = (receipt.donation_pledge ?? 0) > 0;
+  const size = receipt.members.length;
   return (
     <div className="receipt">
       <p className="eyebrow">You are registered</p>
@@ -71,6 +182,43 @@ function Receipt({ receipt }: { receipt: TeamReceipt }) {
         )}
         Status: <span className="badge badge--sub">{receipt.status}</span>
       </p>
+
+      {email && (
+        <p className={`receipt__email ${email === 'failed' ? 'receipt__email--warn' : ''}`} role="status">
+          {email === 'sending' && <>Sending your confirmation email…</>}
+          {email === 'sent' && (
+            <>
+              Confirmation emailed to <strong>{receipt.contact_email}</strong>, and a waiver
+              confirmation to each parent or guardian. Check spam if it hasn&apos;t arrived.
+            </>
+          )}
+          {email === 'failed' && (
+            <>
+              We couldn&apos;t send a confirmation email just now — but your registration is saved.
+              Screenshot this page, or look your team up below any time.
+            </>
+          )}
+        </p>
+      )}
+
+      <div className="receipt__give">
+        <h3 className="receipt__give-title">
+          {pledged
+            ? `Thank you for pledging $${receipt.donation_pledge}`
+            : `Suggested donation: $${donation.perCompetitor} per competitor, optional`}
+        </h3>
+        <DonationWays
+          teamCode={receipt.team_code}
+          division={receipt.division}
+          chosen={pledged ? receipt.donation_method : null}
+        />
+        {size > 1 && (
+          <p className="field__hint receipt__split">
+            Splitting it? Each competitor can send their own ${donation.perCompetitor} with their
+            competitor ID instead, e.g. &ldquo;SFMO 2027 {receipt.members[1].competitor_id}&rdquo;.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -162,9 +310,24 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState<TeamReceipt | null>(null);
+  const [email, setEmail] = useState<EmailState>('sending');
+  const [pledgeChoice, setPledgeChoice] = useState<PledgeChoice>('');
+  const [otherAmount, setOtherAmount] = useState('');
 
   function setField<K extends keyof TeamInput>(key: K, value: TeamInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function setDivision(division: Division) {
+    // Online teams have no check-in, so drop a check-in choice made earlier.
+    setForm((current) => ({
+      ...current,
+      division,
+      donation_method:
+        division === 'online' && current.donation_method === 'checkin'
+          ? null
+          : current.donation_method,
+    }));
   }
 
   function setMember(index: number, key: keyof TeamInput['members'][number], value: string) {
@@ -198,24 +361,42 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       normaliseName(member.full_name) === normaliseName(form.media_release_signed_by),
   );
 
+  const suggested = donation.perCompetitor * form.members.length;
+  const pledge =
+    pledgeChoice === 'suggested'
+      ? suggested
+      : pledgeChoice === 'other' && /^\d{1,5}$/.test(otherAmount.trim())
+        ? Number(otherAmount.trim())
+        : null;
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!signerOnRoster) {
       setError(
-        'The media release must be signed by one of the competitors on your team — type the captain\'s name exactly as it appears in the competitor list.',
+        'The waivers must be signed by one of the competitors on your team — type the captain\'s name exactly as it appears in the competitor list.',
       );
+      return;
+    }
+    if (pledgeChoice === 'other' && pledge === null) {
+      setError('Enter your donation as a whole number of dollars, or choose "Not this time".');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      // An in-person team has nothing to attest; never send a stale tick from
-      // a moment when "online" was selected.
-      setReceipt(
-        await registerTeam({
-          ...form,
-          distance_attested: form.division === 'online' && form.distance_attested,
-        }),
+      const giving = pledge !== null && pledge > 0;
+      const registered = await registerTeam({
+        ...form,
+        // An in-person team has nothing to attest; never send a stale tick from
+        // a moment when "online" was selected.
+        distance_attested: form.division === 'online' && form.distance_attested,
+        donation_pledge: giving ? pledge : null,
+        donation_method: giving ? form.donation_method : null,
+      });
+      setReceipt(registered);
+      setEmail('sending');
+      sendConfirmation(registered.team_code, registered.contact_email).then((sent) =>
+        setEmail(sent ? 'sent' : 'failed'),
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Registration failed.');
@@ -224,7 +405,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
     }
   }
 
-  if (receipt) return <Receipt receipt={receipt} />;
+  if (receipt) return <Receipt receipt={receipt} email={email} />;
 
   return (
     <form onSubmit={onSubmit} className="reg-form">
@@ -241,7 +422,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
                 name="division"
                 value={key}
                 checked={form.division === key}
-                onChange={() => setField('division', key)}
+                onChange={() => setDivision(key)}
                 required
               />
               <span className="division-option__label label">{DIVISIONS[key].label}</span>
@@ -493,17 +674,151 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
-        <legend className="reg-form__legend label">5 · Media release</legend>
-        <div className="release">
-          <p>
-            During SFMO 2027 the San Francisco Math Initiative may take a limited number of
-            photographs of competitors and teams. By signing below, the team captain grants the San
-            Francisco Math Initiative permission to keep these photographs and to use them, without
-            payment, on our website, on social media and in other materials promoting our
-            competitions, now and in the future, and releases the San Francisco Math Initiative
-            from any claims arising from that use.
-          </p>
+        <legend className="reg-form__legend label">5 · Suggested donation</legend>
+        <p className="field__hint reg-form__hint">
+          Entry is free. We suggest ${donation.perCompetitor} per competitor to help cover the venue
+          — give what works for you, or nothing at all. Every team is welcome either way.
+        </p>
+        <div className="division-picker give-picker" role="radiogroup" aria-label="Donation">
+          {(
+            [
+              [
+                'suggested',
+                `$${suggested}`,
+                `Suggested: $${donation.perCompetitor} × ${form.members.length} competitor${form.members.length === 1 ? '' : 's'}`,
+              ],
+              ['other', 'Another amount', 'Any whole number of dollars'],
+              ['none', 'Not this time', 'Entry stays free'],
+            ] as const
+          ).map(([key, label, detail]) => (
+            <label
+              key={key}
+              className={`division-option ${pledgeChoice === key ? 'division-option--on' : ''}`}
+            >
+              <input
+                type="radio"
+                name="pledge"
+                value={key}
+                checked={pledgeChoice === key}
+                onChange={() => setPledgeChoice(key)}
+                required
+              />
+              <span className="division-option__label label">{label}</span>
+              <span className="division-option__detail">{detail}</span>
+            </label>
+          ))}
         </div>
+
+        {pledgeChoice === 'other' && (
+          <div className="field give-amount">
+            <label className="field__label" htmlFor="other_amount">
+              Amount in dollars <span className="req">*</span>
+            </label>
+            <div className="give-amount__input">
+              <span aria-hidden="true">$</span>
+              <input
+                id="other_amount"
+                className="input"
+                inputMode="numeric"
+                pattern="[0-9]{1,5}"
+                required
+                value={otherAmount}
+                onChange={(event) => setOtherAmount(event.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {pledge !== null && pledge > 0 && (
+          <>
+            <p className="field__label give-method__label" id="give-method-label">
+              How will you give? <span className="req">*</span>
+            </p>
+            <div
+              className="division-picker give-picker"
+              role="radiogroup"
+              aria-labelledby="give-method-label"
+            >
+              {(Object.keys(METHODS) as DonationMethod[])
+                .filter((method) => method !== 'checkin' || form.division !== 'online')
+                .map((method) => (
+                  <label
+                    key={method}
+                    className={`division-option ${form.donation_method === method ? 'division-option--on' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="donation_method"
+                      value={method}
+                      checked={form.donation_method === method}
+                      onChange={() => setField('donation_method', method)}
+                      required
+                    />
+                    <span className="division-option__label label">{METHODS[method].label}</span>
+                    <span className="division-option__detail">{METHODS[method].detail}</span>
+                  </label>
+                ))}
+            </div>
+            <p className="field__hint reg-form__rule">
+              Nothing is charged here. Your confirmation shows exactly how to give, with your team ID
+              to put in the memo.
+            </p>
+          </>
+        )}
+      </fieldset>
+
+      <fieldset className="reg-form__group" id="waivers" disabled={busy}>
+        <legend className="reg-form__legend label">6 · Waivers</legend>
+        <p className="field__hint reg-form__hint">
+          Two documents. A parent or guardian signs the liability waiver for each competitor, and
+          your team captain signs once at the bottom for the whole team.
+        </p>
+
+        <WaiverDocs />
+
+        <h4 className="doc__subtitle">Parent or guardian signatures</h4>
+        <p className="field__hint reg-form__hint">
+          For each competitor, their parent or guardian types their own full name. Competitors who
+          are 18 or older type their own name and email. We email each signer to confirm.
+        </p>
+        {form.members.map((member, index) => (
+          <div className="guardian" key={index}>
+            <p className="guardian__who">
+              <span className="member__slot pixel">{String.fromCharCode(65 + index)}</span>
+              <span>{member.full_name.trim() || `Competitor ${String.fromCharCode(65 + index)}`}</span>
+            </p>
+            <div className="field-grid">
+              <div className="field">
+                <label className="field__label" htmlFor={`guardian-name-${index}`}>
+                  Guardian&apos;s full name <span className="req">*</span>
+                </label>
+                <input
+                  id={`guardian-name-${index}`}
+                  className="input"
+                  required
+                  autoComplete="off"
+                  value={member.guardian_name}
+                  onChange={(event) => setMember(index, 'guardian_name', event.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label className="field__label" htmlFor={`guardian-email-${index}`}>
+                  Their email <span className="req">*</span>
+                </label>
+                <input
+                  id={`guardian-email-${index}`}
+                  className="input"
+                  type="email"
+                  required
+                  value={member.guardian_email}
+                  onChange={(event) => setMember(index, 'guardian_email', event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <h4 className="doc__subtitle">Captain&apos;s signature</h4>
         <div className="field reg-form__signature">
           <label className="field__label" htmlFor="media_release_signed_by">
             Captain&apos;s full name — your typed signature <span className="req">*</span>
@@ -523,25 +838,37 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
           >
             {form.media_release_signed_by && !signerOnRoster
               ? 'This must match one of the competitor names above exactly.'
-              : 'The captain must be one of the competitors listed above.'}
+              : 'The captain must be one of the competitors listed above. This one signature covers both boxes below.'}
           </p>
         </div>
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={form.media_release}
-            onChange={(event) => setField('media_release', event.target.checked)}
-            required
-          />
-          <span>
-            I am the captain of this team. I agree to the media release above on behalf of every
-            member of my team, and I confirm that each member — and, for any member under 18, their
-            parent or guardian — has agreed to it.
-          </span>
-        </label>
-        <p className="field__hint reg-form__waiver">
-          A separate liability waiver will be sent to your team before competition day.
-        </p>
+        <div className="doc__confirms">
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={form.media_release}
+              onChange={(event) => setField('media_release', event.target.checked)}
+              required
+            />
+            <span>
+              <strong>Media release.</strong> I am the captain of this team. I agree to the media
+              release on behalf of every member of my team, and I confirm that each member — and,
+              for any member under 18, their parent or guardian — has agreed to it.
+            </span>
+          </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={form.liability_waiver}
+              onChange={(event) => setField('liability_waiver', event.target.checked)}
+              required
+            />
+            <span>
+              <strong>Liability waiver.</strong> I confirm that the parent or guardian named for
+              each competitor above (or the competitor, if 18 or older) has read the liability
+              waiver, agrees to it, and typed their own name as their signature.
+            </span>
+          </label>
+        </div>
       </fieldset>
 
       <label className="checkbox reg-form__agree">
@@ -587,6 +914,12 @@ export function RegisterPage() {
   }, []);
 
   const open = useMemo(() => (settings ? isWindowOpenNow(settings) : false), [settings]);
+  // Guardian emails link to /register#waivers. The target only exists once
+  // the registration window has loaded, so the browser's own jump misses it.
+  const wantsWaivers = typeof window !== 'undefined' && window.location.hash === '#waivers';
+  useEffect(() => {
+    if (settings && wantsWaivers) document.getElementById('waivers')?.scrollIntoView();
+  }, [settings, wantsWaivers]);
   const opensAt = settings?.opensAt ?? sfmo2027.registrationOpensAt;
 
   return (
@@ -675,6 +1008,23 @@ export function RegisterPage() {
           )}
         </div>
       </section>
+
+      {settings && !open && (
+        <section className="section section--tight">
+          <div className="wrap wrap--narrow">
+            <details className="panel waiver-docs" id="waivers" open={wantsWaivers}>
+              <summary className="waiver-docs__summary">
+                Read the media release and liability waiver
+              </summary>
+              <p className="field__hint reg-form__hint">
+                Signed as part of registration: a parent or guardian signs the liability waiver for
+                each competitor, and the team captain signs for the whole team.
+              </p>
+              <WaiverDocs />
+            </details>
+          </div>
+        </section>
+      )}
 
       {isSupabaseConfigured && (
         <section className="section section--tight">

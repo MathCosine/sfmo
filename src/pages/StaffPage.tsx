@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { SeoHead } from '../components/SeoHead';
 import { DIVISIONS, links, type Division } from '../lib/config';
+import { sendConfirmation, type DonationMethod } from '../lib/registration';
 import { isSupabaseConfigured, readErrorMessage, supabase } from '../lib/supabase';
 
 type RosterMember = {
@@ -10,6 +11,8 @@ type RosterMember = {
   full_name: string;
   email: string | null;
   grade: string | null;
+  guardian_name: string | null;
+  guardian_email: string | null;
 };
 
 type RosterRow = {
@@ -35,7 +38,33 @@ type RosterRow = {
   media_release: boolean;
   media_release_signed_by: string | null;
   media_release_signed_at: string | null;
+  liability_waiver: boolean;
+  liability_waiver_signed_by: string | null;
+  liability_waiver_signed_at: string | null;
+  donation_pledge: number | null;
+  donation_method: DonationMethod | null;
+  donation_received: boolean;
+  confirmation_sent_at: string | null;
 };
+
+const METHOD_LABEL: Record<DonationMethod, string> = {
+  zelle: 'Zelle',
+  online: 'Online',
+  checkin: 'At check-in',
+};
+
+function pledgeLabel(row: RosterRow) {
+  if (!row.donation_pledge) return '—';
+  return `$${row.donation_pledge}${row.donation_method ? ` · ${METHOD_LABEL[row.donation_method]}` : ''}`;
+}
+
+/** Registrants control names, so escape them before writing raw HTML. */
+function escapeHtml(text: unknown) {
+  return String(text ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
+}
 
 function divisionLabel(division: Division | null) {
   return division ? DIVISIONS[division].label : '—';
@@ -66,6 +95,8 @@ function toCsv(rows: RosterRow[]): string {
     'full_name',
     'grade',
     'member_email',
+    'guardian_name',
+    'guardian_email',
     'division',
     'distance_attested',
     'school',
@@ -82,6 +113,12 @@ function toCsv(rows: RosterRow[]): string {
     'staff_notes',
     'media_release_signed_by',
     'media_release_signed_at',
+    'liability_waiver_signed_by',
+    'liability_waiver_signed_at',
+    'donation_pledge',
+    'donation_method',
+    'donation_received',
+    'confirmation_sent_at',
     'registered_at',
   ];
 
@@ -95,6 +132,8 @@ function toCsv(rows: RosterRow[]): string {
         member?.full_name ?? '',
         member?.grade ?? '',
         member?.email ?? '',
+        member?.guardian_name ?? '',
+        member?.guardian_email ?? '',
         divisionLabel(row.division),
         row.distance_attested ? 'yes' : '',
         row.school,
@@ -111,6 +150,12 @@ function toCsv(rows: RosterRow[]): string {
         row.staff_notes,
         row.media_release_signed_by,
         row.media_release_signed_at,
+        row.liability_waiver ? row.liability_waiver_signed_by : '',
+        row.liability_waiver_signed_at,
+        row.donation_pledge,
+        row.donation_method ? METHOD_LABEL[row.donation_method] : '',
+        row.donation_received ? 'yes' : '',
+        row.confirmation_sent_at,
         row.created_at,
       ]
         .map(csvCell)
@@ -215,6 +260,7 @@ function Dashboard({ session }: { session: Session }) {
   const [divisionFilter, setDivisionFilter] = useState<'all' | Division>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -287,6 +333,55 @@ function Dashboard({ session }: { session: Session }) {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, status } : row)));
   }
 
+  /** Ticks at once (it is used at a busy check-in desk) and rolls back on failure. */
+  async function setReceived(id: string, received: boolean) {
+    if (!supabase) return;
+    const mark = (value: boolean) =>
+      setRows((current) =>
+        current.map((row) => (row.id === id ? { ...row, donation_received: value } : row)),
+      );
+    mark(received);
+    const { error: updateError } = await supabase
+      .from('teams')
+      .update({ donation_received: received })
+      .eq('id', id);
+    if (updateError) {
+      mark(!received);
+      setError(readErrorMessage(updateError, 'Could not update that donation.'));
+    }
+  }
+
+  /**
+   * The Edge Function only ever sends a team's confirmation once, so a resend
+   * first clears the stamp, then asks for it again.
+   */
+  async function resendConfirmation(row: RosterRow) {
+    if (!supabase) return;
+    if (
+      row.confirmation_sent_at &&
+      !window.confirm(`Send Team ${row.team_code}'s confirmation emails again?`)
+    ) {
+      return;
+    }
+    setSending(row.id);
+    const { error: clearError } = await supabase
+      .from('teams')
+      .update({ confirmation_sent_at: null })
+      .eq('id', row.id);
+    const sent = !clearError && (await sendConfirmation(row.team_code, row.contact_email));
+    setSending(null);
+    if (!sent) {
+      setError(
+        'Could not send that confirmation. Check the send-confirmation function and its secrets in Supabase (see supabase/README.md).',
+      );
+      void load();
+      return;
+    }
+    setCopied(`Confirmation sent to Team ${row.team_code}`);
+    window.setTimeout(() => setCopied(null), 2500);
+    void load();
+  }
+
   async function toggleRegistration() {
     if (!supabase || !settings) return;
     const next = !settings.registration_open;
@@ -331,6 +426,20 @@ function Dashboard({ session }: { session: Session }) {
     () => uniq(filtered.flatMap((row) => [row.contact_email, row.coach_email])),
     [filtered],
   );
+  const guardianEmails = useMemo(
+    () => uniq(filtered.flatMap((row) => row.members.map((member) => member.guardian_email))),
+    [filtered],
+  );
+
+  const giving = useMemo(() => {
+    const live = rows.filter((row) => row.status !== 'cancelled');
+    const pledged = live.filter((row) => (row.donation_pledge ?? 0) > 0);
+    return {
+      teams: pledged.length,
+      pledged: pledged.reduce((sum, row) => sum + (row.donation_pledge ?? 0), 0),
+      received: live.filter((row) => row.donation_received).length,
+    };
+  }, [rows]);
 
   /** Bulk-set status on everything currently in view. */
   async function setAllStatus(status: string) {
@@ -353,7 +462,7 @@ function Dashboard({ session }: { session: Session }) {
       .flatMap((row) =>
         row.members.map(
           (member) =>
-            `<tr><td class="id">${member.competitor_id}</td><td>${member.full_name}</td><td>${row.team_name}</td><td>${member.grade ?? ''}</td><td class="box"></td></tr>`,
+            `<tr><td class="id">${escapeHtml(member.competitor_id)}</td><td>${escapeHtml(member.full_name)}</td><td>${escapeHtml(row.team_name)}</td><td>${escapeHtml(member.grade)}</td><td class="box"></td></tr>`,
         ),
       )
       .join('');
@@ -432,6 +541,10 @@ function Dashboard({ session }: { session: Session }) {
           <p className="stat__label">pending review</p>
         </div>
       </div>
+      <p className="staff__giving mono">
+        Donations: ${giving.pledged} pledged by {giving.teams} team{giving.teams === 1 ? '' : 's'} ·{' '}
+        {giving.received} marked received
+      </p>
 
       {settings && (
         <div className={`notice ${settings.registration_open ? 'notice--ok' : 'notice--warn'}`}>
@@ -472,6 +585,9 @@ function Dashboard({ session }: { session: Session }) {
           </button>
           <button type="button" className="btn" onClick={() => void copy('contact emails', contactEmails)}>
             Copy contact emails ({contactEmails.length})
+          </button>
+          <button type="button" className="btn" onClick={() => void copy('guardian emails', guardianEmails)}>
+            Copy guardian emails ({guardianEmails.length})
           </button>
           <button
             type="button"
@@ -570,6 +686,7 @@ function Dashboard({ session }: { session: Session }) {
                 <th>School</th>
                 <th>Contact</th>
                 <th>Status</th>
+                <th>Donation</th>
                 <th>Registered</th>
               </tr>
             </thead>
@@ -608,11 +725,22 @@ function Dashboard({ session }: { session: Session }) {
                         ))}
                       </select>
                     </td>
+                    <td>
+                      <span className="staff__pledge">{pledgeLabel(row)}</span>
+                      <label className="checkbox staff__received" onClick={(event) => event.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={row.donation_received}
+                          onChange={(event) => void setReceived(row.id, event.target.checked)}
+                        />
+                        <span>Received</span>
+                      </label>
+                    </td>
                     <td className="mono">{new Date(row.created_at).toLocaleDateString()}</td>
                   </tr>
                   {expanded === row.id && (
                     <tr className="staff__detail">
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="staff__detail-grid">
                           <div>
                             <h4 className="dive__subhead">Roster</h4>
@@ -624,6 +752,12 @@ function Dashboard({ session }: { session: Session }) {
                                     {member.full_name}
                                     {member.grade ? <small> · Grade {member.grade}</small> : null}
                                     {member.email ? <small> · {member.email}</small> : null}
+                                    {member.guardian_name ? (
+                                      <small className="staff__guardian">
+                                        Waiver signed by {member.guardian_name}
+                                        {member.guardian_email ? ` · ${member.guardian_email}` : ''}
+                                      </small>
+                                    ) : null}
                                   </span>
                                 </li>
                               ))}
@@ -662,6 +796,45 @@ function Dashboard({ session }: { session: Session }) {
                                           : ''
                                       }`
                                     : 'Not signed'}
+                                </dd>
+                              </div>
+                              <div className="facts__row">
+                                <dt>Liability waiver</dt>
+                                <dd>
+                                  {row.liability_waiver && row.liability_waiver_signed_by
+                                    ? `Confirmed by captain ${row.liability_waiver_signed_by}${
+                                        row.liability_waiver_signed_at
+                                          ? `, ${new Date(row.liability_waiver_signed_at).toLocaleDateString()}`
+                                          : ''
+                                      }`
+                                    : 'Not signed (registered before waivers were added)'}
+                                </dd>
+                              </div>
+                              <div className="facts__row">
+                                <dt>Donation</dt>
+                                <dd>
+                                  {pledgeLabel(row)}
+                                  {row.donation_received ? ' — received' : ''}
+                                </dd>
+                              </div>
+                              <div className="facts__row">
+                                <dt>Confirmation</dt>
+                                <dd>
+                                  {row.confirmation_sent_at
+                                    ? `Emailed ${new Date(row.confirmation_sent_at).toLocaleString()}`
+                                    : 'Not sent'}{' '}
+                                  <button
+                                    type="button"
+                                    className="btn btn--sm"
+                                    disabled={sending === row.id}
+                                    onClick={() => void resendConfirmation(row)}
+                                  >
+                                    {sending === row.id
+                                      ? 'Sending…'
+                                      : row.confirmation_sent_at
+                                        ? 'Resend'
+                                        : 'Send now'}
+                                  </button>
                                 </dd>
                               </div>
                               {row.division === 'online' && (

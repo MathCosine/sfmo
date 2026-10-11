@@ -1,4 +1,5 @@
 import { ExternalIcon } from '../components/Icons';
+import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
 import { links } from '../lib/config';
 
@@ -16,17 +17,20 @@ const CAMP_POINTS = [
   'Sessions: Jun 22-26, Jun 29-Jul 3, Jul 27-31, Aug 3-7',
 ];
 
-const MATHCLOUD_FEATURES = [
+const MATHCLOUD_FEATURES: Array<{ title: string; icon: PixelIconName; body: string }> = [
   {
     title: 'Easy to Use',
+    icon: 'cursor',
     body: 'A streamlined interface designed for math competitions.',
   },
   {
     title: 'Live Feedback',
+    icon: 'bolt',
     body: 'Instant confirmation of your submitted answers and progress tracking.',
   },
   {
     title: 'Robust Connection',
+    icon: 'signal',
     body: 'Improved stability for reliable competition proctoring and submission.',
   },
 ];
@@ -132,6 +136,7 @@ export function InitiativesPage() {
             <div className="grid grid--3">
               {MATHCLOUD_FEATURES.map((feature) => (
                 <div className="card" key={feature.title}>
+                  <PixelIcon name={feature.icon} size={40} className="icon-card__icon" />
                   <h3 className="card__title">{feature.title}</h3>
                   <p className="card__body">{feature.body}</p>
                 </div>

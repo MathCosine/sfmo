@@ -3,13 +3,17 @@ import { Art } from '../components/Art';
 import { Bubbles } from '../components/Bubbles';
 import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon, ExternalIcon } from '../components/Icons';
+import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { PixelWave } from '../components/PixelWave';
+import { RadiusMap } from '../components/RadiusMap';
 import { SeoHead } from '../components/SeoHead';
 import { SponsorWall } from '../components/SponsorWall';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { asset } from '../lib/asset';
 import {
   DIVISIONS,
+  IN_PERSON_RADIUS_MILES,
+  SLOT_LETTERS,
   distanceRule,
   faq,
   links,
@@ -27,29 +31,31 @@ const doorsOpen = publicDay[0];
 const dayEnds = publicDay[publicDay.length - 1];
 const describedRounds = rounds.filter((round) => !round.mystery).length;
 
-
-
-const EXPLORE = [
+const EXPLORE: Array<{ to: string; icon: PixelIconName; eyebrow: string; title: string; body: string }> = [
   {
     to: '/about',
+    icon: 'compass',
     eyebrow: 'Who we are',
     title: 'About SFMI',
     body: `Our mission, the students who run it, and the ${participantCountryWord} countries our competitors have written in from.`,
   },
   {
     to: '/initiatives',
+    icon: 'bulb',
     eyebrow: 'What else we build',
     title: 'Initiatives',
     body: 'MathCloud, our own testing platform, and San Francisco Math Academy — including a free AMC 8 summer camp.',
   },
   {
     to: '/archive',
+    icon: 'book',
     eyebrow: 'What came before',
     title: 'Archive',
     body: 'SFPO 2026, SFM3 2026 and the inaugural SFMO 2026, plus past problem sets and training resources.',
   },
   {
     to: '/team',
+    icon: 'people',
     eyebrow: 'The crew',
     title: 'Meet the Team',
     body: 'Eight organizers, problem writers and volunteers. Every one of them is a student.',
@@ -153,29 +159,55 @@ export function HomePage() {
             <p className="eyebrow">Two divisions</p>
             <h2>In person, or online</h2>
           </div>
-          <div className="grid grid--2">
-            <article className="card division-card">
-              <p className="card__eyebrow">{DIVISIONS.in_person.label}</p>
-              <h3 className="card__title">San Francisco</h3>
-              <p className="card__body">
-                The main event, in person. The venue is still being finalised.
-              </p>
-            </article>
-            <article className="card division-card">
-              <p className="card__eyebrow">{DIVISIONS.online.label}</p>
-              <h3 className="card__title">From anywhere farther</h3>
-              <p className="card__body">
-                SFMO 2027 online, for teams living more than 100 miles from the Bay Area.
-              </p>
-            </article>
-          </div>
-          <div className="notice notice--info distance-rule">
-            <div>
-              <p className="notice__title">The distance rule</p>
-              <p className="notice__body">
-                <strong>{distanceRule.rule}</strong> {distanceRule.reach} {distanceRule.online}
-              </p>
+          <div className="divisions__layout">
+            <div className="divisions__cards">
+              <article className="card division-card">
+                <PixelIcon name="sub" size={56} className="division-card__icon" />
+                <div>
+                  <p className="card__eyebrow">{DIVISIONS.in_person.label}</p>
+                  <h3 className="card__title">San Francisco</h3>
+                  <p className="card__body">The main event. The venue is still being finalised.</p>
+                  <p className="division-card__tag label">
+                    Within {IN_PERSON_RADIUS_MILES} mi of the Bay Area
+                  </p>
+                </div>
+              </article>
+              <article className="card division-card">
+                <PixelIcon name="laptop" size={56} className="division-card__icon" />
+                <div>
+                  <p className="card__eyebrow">{DIVISIONS.online.label}</p>
+                  <h3 className="card__title">From anywhere farther</h3>
+                  <p className="card__body">
+                    For teams living more than {IN_PERSON_RADIUS_MILES} miles from the Bay Area.
+                  </p>
+                  <p className="division-card__tag division-card__tag--far label">
+                    {IN_PERSON_RADIUS_MILES}+ mi away
+                  </p>
+                </div>
+              </article>
+              <div className="rule-callout">
+                <p className="rule-callout__title label">The distance rule</p>
+                <p className="rule-callout__rule">{distanceRule.rule}</p>
+                <p className="rule-callout__body">
+                  {distanceRule.reach} {distanceRule.online}
+                </p>
+              </div>
             </div>
+
+            <figure className="sonar-panel">
+              <RadiusMap />
+              <figcaption className="sonar-panel__legend">
+                <span>
+                  <i className="sonar-key" /> In person
+                </span>
+                <span>
+                  <i className="sonar-key sonar-key--out" /> Online
+                </span>
+                <span className="sonar-panel__note">
+                  Drawn to scale from San Francisco. Near the line? Email us.
+                </span>
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -234,13 +266,19 @@ export function HomePage() {
                 </p>
               </div>
             </article>
-            <article className="card card--warm">
+            <article className="card card--warm id-card">
               <p className="card__eyebrow">Your ID</p>
-              <h3 className="card__title">07A through 07D</h3>
+              <h3 className="card__title">One number per team, one letter each</h3>
+              <ul className="id-tags" aria-label="Example competitor IDs for team 07">
+                {SLOT_LETTERS.map((letter) => (
+                  <li key={letter} className="id-tags__tag pixel">
+                    07{letter}
+                  </li>
+                ))}
+              </ul>
               <p className="card__body">
-                Register and your team is assigned a number on the spot. Each member gets a letter,
-                so you compete as 07A, 07B, 07C and 07D. It goes on every answer sheet and it is how
-                we check you in on the day.
+                Your team gets its number the moment you register. It goes on every answer sheet,
+                and it is how we check you in on the day.
               </p>
             </article>
           </div>
@@ -280,17 +318,36 @@ export function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <section className="section">
         <div className="wrap">
-          <div className="section-head">
-            <p className="eyebrow">Before you ask</p>
-            <h2>Questions we get</h2>
-          </div>
-          <div className="faq">
-            {faq.map((item) => (
-              <details className="faq__item" key={item.q}>
-                <summary className="faq__q">{item.q}</summary>
-                <p className="faq__a">{item.a}</p>
-              </details>
-            ))}
+          <div className="faq-layout">
+            <aside className="faq-aside">
+              <div className="section-head">
+                <p className="eyebrow">Before you ask</p>
+                <h2>Questions we get</h2>
+              </div>
+              <div className="faq-aside__card">
+                <PixelIcon name="question" size={48} />
+                <p className="faq-aside__title">Still wondering?</p>
+                <p className="faq-aside__body">
+                  Ask in the Discord or email us, and an organiser will get back to you.
+                </p>
+                <div className="btn-row">
+                  <a href={links.discord} target="_blank" rel="noreferrer" className="btn btn--deep">
+                    <DiscordIcon size={16} /> Discord
+                  </a>
+                  <a href={`mailto:${links.email}`} className="btn">
+                    Email us
+                  </a>
+                </div>
+              </div>
+            </aside>
+            <div className="faq">
+              {faq.map((item) => (
+                <details className="faq__item" key={item.q}>
+                  <summary className="faq__q">{item.q}</summary>
+                  <p className="faq__a">{item.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -373,7 +430,8 @@ export function HomePage() {
 
           <div className="grid grid--2">
             {EXPLORE.map((item) => (
-              <Link className="card card--link" to={item.to} key={item.to}>
+              <Link className="card card--link explore-card" to={item.to} key={item.to}>
+                <PixelIcon name={item.icon} size={44} className="explore-card__icon" />
                 <p className="card__eyebrow">{item.eyebrow}</p>
                 <h3 className="card__title">{item.title}</h3>
                 <p className="card__body">{item.body}</p>

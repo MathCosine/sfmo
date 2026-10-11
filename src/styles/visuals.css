@@ -1,0 +1,672 @@
+/* ==========================================================================
+   Visuals — pixel icons, the sonar map, and the layouts that use them.
+   Kept apart from pages.css so the illustrated parts of the site are easy
+   to find and restyle together.
+   ========================================================================== */
+
+.px-icon {
+  display: block;
+  flex: none;
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   Home · divisions + the 100-mile rule
+   -------------------------------------------------------------------------- */
+
+.divisions__layout {
+  display: grid;
+  gap: 1.4rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .divisions__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 2rem;
+  }
+}
+
+.divisions__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.division-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.division-card__icon {
+  padding: 6px;
+  background: color-mix(in srgb, var(--sub) 18%, var(--paper));
+  border: var(--border);
+  border-radius: 10px;
+}
+
+.division-card__tag {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--on-sub);
+  background: var(--sub);
+  border: 2px solid var(--ink);
+}
+
+.division-card__tag--far {
+  color: var(--on-fill);
+  background: var(--btn-deep-bg);
+}
+
+.rule-callout {
+  padding: 1.1rem 1.25rem;
+  background: var(--paper-warm);
+  border: var(--border);
+  border-left: 8px solid var(--sub);
+  box-shadow: var(--shadow-sm);
+}
+
+.rule-callout__title {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--lagoon-deep);
+}
+
+.rule-callout__rule {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.rule-callout__body {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.sonar-panel {
+  margin: 0;
+  padding: 1rem;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.sonar-panel__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  align-items: center;
+  margin-top: 0.8rem;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.sonar-panel__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sonar-panel__note {
+  flex-basis: 100%;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+}
+
+.sonar-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: var(--sub);
+  border: 2px solid var(--ink);
+}
+
+.sonar-key--out {
+  background: transparent;
+  border-color: var(--coral);
+}
+
+/* The sonar screen itself. Colours are fixed (it is a screen, not a page
+   surface), so it reads the same in both themes. */
+.sonar {
+  --sonar-bg: #0c3a50;
+  --sonar-ring: #9ed3ea;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 520px;
+  margin: 0 auto;
+  font-family: var(--font-label);
+}
+
+.sonar__bezel {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 4;
+}
+
+.sonar__screen {
+  fill: var(--sonar-bg);
+}
+
+.sonar__grid {
+  fill: none;
+  stroke: var(--sonar-ring);
+  stroke-opacity: 0.18;
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.sonar__sea {
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  fill: var(--sonar-ring);
+  fill-opacity: 0.35;
+}
+
+.sonar__ring {
+  fill: none;
+  stroke: #f2b52c;
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+}
+
+.sonar__ring-label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  fill: #f2b52c;
+  paint-order: stroke;
+  stroke: var(--sonar-bg);
+  stroke-width: 5px;
+}
+
+.sonar__dot {
+  fill: #f2b52c;
+  stroke: #05131d;
+  stroke-width: 2;
+}
+
+.sonar__dot--out {
+  fill: var(--sonar-bg);
+  stroke: #ff8064;
+  stroke-width: 2.5;
+}
+
+.sonar__name {
+  font-size: 12.5px;
+  font-weight: 500;
+  fill: #f4fbfe;
+  paint-order: stroke;
+  stroke: var(--sonar-bg);
+  stroke-width: 4px;
+}
+
+.sonar__name--home {
+  font-size: 13.5px;
+  fill: #f2b52c;
+}
+
+.sonar__miles {
+  font-size: 10.5px;
+  fill: #9ed3ea;
+  paint-order: stroke;
+  stroke: var(--sonar-bg);
+  stroke-width: 4px;
+}
+
+.sonar__miles--out {
+  fill: #ff9c86;
+}
+
+/* Phones: the screen is ~330px wide, so the labels grow and drop the
+   "· in person" suffix (the square's style and the legend still say it). */
+@media (max-width: 560px) {
+  .sonar__name {
+    font-size: 15px;
+  }
+
+  .sonar__name--home {
+    font-size: 15px;
+  }
+
+  .sonar__miles {
+    font-size: 12px;
+  }
+
+  .sonar__verdict {
+    display: none;
+  }
+
+  .sonar__sea,
+  .sonar__ring-label {
+    font-size: 13px;
+  }
+}
+
+.sonar__home {
+  fill: #f2b52c;
+  stroke: #05131d;
+  stroke-width: 2;
+}
+
+.sonar__ping {
+  fill: none;
+  stroke: #f2b52c;
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: sonar-ping 3s ease-out infinite;
+}
+
+.sonar__sweep {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: sonar-sweep 7s linear infinite;
+}
+
+@keyframes sonar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sonar-ping {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sonar__sweep,
+  .sonar__ping {
+    animation: none;
+  }
+
+  .sonar__sweep {
+    transform: rotate(-30deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Home · competitor ID tags
+   -------------------------------------------------------------------------- */
+
+.id-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.2rem 0 0.9rem;
+  list-style: none;
+}
+
+.id-tags__tag {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+  color: var(--on-sub);
+  background: var(--sub);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.id-tags__tag:nth-child(2) {
+  transform: rotate(-2deg);
+}
+
+.id-tags__tag:nth-child(3) {
+  transform: rotate(1.5deg);
+}
+
+/* --------------------------------------------------------------------------
+   Home · FAQ with a side panel
+   -------------------------------------------------------------------------- */
+
+.faq-layout {
+  display: grid;
+  gap: 1.6rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .faq-layout {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 2.4rem;
+  }
+
+  .faq-aside {
+    position: sticky;
+    top: 6.5rem;
+  }
+}
+
+.faq-aside .section-head {
+  margin-bottom: 1.2rem;
+}
+
+.faq-aside__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.3rem;
+  background: var(--paper-warm);
+  border: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.faq-aside__title {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.faq-aside__body {
+  font-size: 0.93rem;
+  color: var(--ink-soft);
+}
+
+.faq-aside__card .btn-row {
+  margin-top: 0.4rem;
+}
+
+/* --------------------------------------------------------------------------
+   Icon cards (explore, principles, features, highlights)
+   -------------------------------------------------------------------------- */
+
+.explore-card__icon,
+.icon-card__icon {
+  margin-bottom: 0.9rem;
+}
+
+.icon-card__icon--badge {
+  padding: 6px;
+  background: color-mix(in srgb, var(--sub) 18%, var(--paper));
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Register · how it works, what we ask (icon grids)
+   -------------------------------------------------------------------------- */
+
+.icon-grid {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.icon-grid li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+  align-content: start; /* equal-height cards must not spread their rows */
+  padding: 0.85rem 0.95rem;
+  background: var(--paper-warm);
+  border: var(--border);
+}
+
+.icon-grid__title {
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.icon-grid__body {
+  margin-top: 0.2rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+@media (min-width: 560px) {
+  .icon-grid--ask {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Steps: numbered, joined by a dashed line on wide screens. */
+.icon-grid--steps {
+  counter-reset: step;
+}
+
+.icon-grid--steps li {
+  position: relative;
+  counter-increment: step;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-grid--steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: -0.7rem;
+  left: -0.7rem;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  color: var(--on-sub);
+  background: var(--sub);
+  border: 2px solid var(--ink);
+}
+
+@media (min-width: 640px) {
+  .icon-grid--steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.4rem;
+  }
+
+  .icon-grid--steps li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .icon-grid--steps li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 2.1rem;
+    right: calc(-1.4rem - 2px);
+    width: 1.4rem;
+    border-top: 3px dashed var(--ink-faint);
+  }
+}
+
+.reg-steps {
+  margin: 0.4rem 0 2rem;
+}
+
+/* --------------------------------------------------------------------------
+   Register · the two documents
+   -------------------------------------------------------------------------- */
+
+.docs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  margin-bottom: 1.4rem;
+}
+
+.doc {
+  padding: 1.1rem;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.doc__head {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.doc__head .px-icon {
+  padding: 5px;
+  background: color-mix(in srgb, var(--sub) 18%, var(--paper));
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+
+.doc__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.doc__who {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--lagoon-deep);
+}
+
+.doc__gist {
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  background: color-mix(in srgb, var(--kelp) 12%, var(--paper));
+  border-left: 5px solid var(--kelp-deep);
+}
+
+.doc .release {
+  margin-bottom: 0;
+  border-width: 1px;
+  border-style: dashed;
+}
+
+.clauses {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0.8rem 0;
+  list-style: none;
+}
+
+@media (min-width: 720px) {
+  .clauses {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.clause {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.7rem;
+  background: var(--paper-warm);
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 8px;
+}
+
+.clause strong {
+  color: var(--ink);
+}
+
+.clause__badge {
+  position: relative;
+  display: block;
+}
+
+.clause__num {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  font-size: 0.62rem;
+  color: var(--on-fill);
+  background: var(--btn-deep-bg);
+}
+
+.doc__signing {
+  font-style: italic;
+}
+
+/* About · principles: icon in the top-right corner, clear of the number tab. */
+.principle__icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.principle .card__title {
+  padding-right: 3.2rem;
+}
+
+/* --------------------------------------------------------------------------
+   Staff · division tabs
+   -------------------------------------------------------------------------- */
+
+.division-tabs {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.4rem 0 1.1rem;
+}
+
+@media (min-width: 720px) {
+  .division-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.division-tab {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--paper);
+  border: var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.division-tab:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.division-tab--on {
+  background: color-mix(in srgb, var(--sub) 26%, var(--paper));
+  box-shadow: var(--shadow);
+  outline: 3px solid var(--sub);
+  outline-offset: -6px;
+}
+
+.division-tab__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.division-tab__label {
+  font-weight: 800;
+}
+
+.division-tab__count {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}

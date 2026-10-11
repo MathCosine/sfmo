@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { PixelIcon } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
 import { DIVISIONS, links, type Division } from '../lib/config';
 import { sendConfirmation, sendTestEmail, type DonationMethod } from '../lib/registration';
@@ -439,6 +440,23 @@ function Dashboard({ session }: { session: Session }) {
     [filtered],
   );
 
+  /** Live (non-cancelled) teams and competitors per division, for the tabs. */
+  const divisionCounts = useMemo(() => {
+    const live = rows.filter((row) => row.status !== 'cancelled');
+    const count = (match: (row: RosterRow) => boolean) => {
+      const teams = live.filter(match);
+      return {
+        teams: teams.length,
+        competitors: teams.reduce((total, row) => total + row.members.length, 0),
+      };
+    };
+    return {
+      all: count(() => true),
+      in_person: count((row) => row.division === 'in_person'),
+      online: count((row) => row.division === 'online'),
+    };
+  }, [rows]);
+
   const giving = useMemo(() => {
     const live = rows.filter((row) => row.status !== 'cancelled');
     const pledged = live.filter((row) => (row.donation_pledge ?? 0) > 0);
@@ -637,6 +655,36 @@ function Dashboard({ session }: { session: Session }) {
         )}
       </div>
 
+      <div className="division-tabs" role="group" aria-label="Show division">
+        {(['all', 'in_person', 'online'] as const).map((key) => {
+          const counts = divisionCounts[key];
+          return (
+            <button
+              type="button"
+              key={key}
+              className={`division-tab ${divisionFilter === key ? 'division-tab--on' : ''}`}
+              aria-pressed={divisionFilter === key}
+              onClick={() => setDivisionFilter(key)}
+            >
+              {key === 'all' ? (
+                <PixelIcon name="people" size={32} />
+              ) : (
+                <PixelIcon name={key === 'in_person' ? 'sub' : 'laptop'} size={32} />
+              )}
+              <span className="division-tab__text">
+                <span className="division-tab__label">
+                  {key === 'all' ? 'All teams' : DIVISIONS[key].label}
+                </span>
+                <span className="division-tab__count mono">
+                  {counts.teams} team{counts.teams === 1 ? '' : 's'} · {counts.competitors}{' '}
+                  competitor{counts.competitors === 1 ? '' : 's'}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="staff__filters">
         <div className="field">
           <label className="field__label" htmlFor="staff-search">
@@ -664,24 +712,6 @@ function Dashboard({ session }: { session: Session }) {
             {STATUSES.map((status) => (
               <option value={status} key={status}>
                 {status}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label className="field__label" htmlFor="staff-division">
-            Division
-          </label>
-          <select
-            id="staff-division"
-            className="select"
-            value={divisionFilter}
-            onChange={(event) => setDivisionFilter(event.target.value as 'all' | Division)}
-          >
-            <option value="all">All</option>
-            {(Object.keys(DIVISIONS) as Division[]).map((key) => (
-              <option value={key} key={key}>
-                {DIVISIONS[key].label}
               </option>
             ))}
           </select>

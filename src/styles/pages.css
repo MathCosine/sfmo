@@ -991,11 +991,9 @@
   color: var(--kelp-deep);
 }
 
-.locked__what {
-  padding: 1.2rem 1.3rem;
+.locked__what,
+.locked__how {
   margin-bottom: 1.6rem;
-  background: var(--paper-warm);
-  border: var(--border);
 }
 
 .locked__debug {
@@ -1185,7 +1183,7 @@
 
 .staff__filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px 180px;
+  grid-template-columns: minmax(0, 1fr) 180px;
   gap: 1rem;
   align-items: end;
 }
@@ -1963,10 +1961,6 @@
    Divisions & media release
    -------------------------------------------------------------------------- */
 
-.distance-rule {
-  margin-top: 1.2rem;
-}
-
 .division-picker {
   display: grid;
   gap: 0.8rem;
@@ -2056,15 +2050,6 @@
    Waivers (registration form)
    -------------------------------------------------------------------------- */
 
-.doc__title {
-  margin: 1.3rem 0 0.5rem;
-  font-size: 1.05rem;
-}
-
-.reg-form__hint + .doc__title {
-  margin-top: 0;
-}
-
 .waiver-docs__summary {
   margin-bottom: 1rem;
   font-weight: 800;
@@ -2084,17 +2069,6 @@
 .release p + ol,
 .release ol + p {
   margin-top: 0.7rem;
-}
-
-.doc__clauses {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding-left: 1.3rem;
-}
-
-.doc__clauses strong {
-  color: var(--ink);
 }
 
 .guardian {

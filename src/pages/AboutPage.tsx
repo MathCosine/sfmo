@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowIcon } from '../components/Icons';
+import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
 import { WorldMap } from '../components/WorldMap';
 import {
@@ -11,21 +12,27 @@ import { boardMembers, contributors } from '../data/staff';
 import { asset } from '../lib/asset';
 import { links } from '../lib/config';
 
-const principles = (countryWord: string) => [
+const principles = (
+  countryWord: string,
+): Array<{ title: string; icon: PixelIconName; body: string }> => [
   {
     title: 'Free, always',
+    icon: 'heart',
     body: 'Every contest we have run has been free to enter. Cost should never be the reason a student does not sit a competition, so prizes are funded by our sponsors and our Academy instead of entry fees.',
   },
   {
     title: 'Written by students',
+    icon: 'doc',
     body: 'Our problem writers are in high school right now. They remember which hints actually help and which problems only look clever, and it shows in the problem sets.',
   },
   {
     title: 'Open to anywhere',
+    icon: 'globe',
     body: `Competitors have written our contests from ${countryWord} countries across four continents. Wherever you live, there is a way to compete.`,
   },
   {
     title: 'Built, not bought',
+    icon: 'gear',
     body: 'When the off-the-shelf testing platforms did not fit, we wrote our own. MathCloud runs our contests and is shaped by feedback from the students who use it.',
   },
 ];
@@ -134,6 +141,7 @@ export function AboutPage() {
             {principles(participantCountryWord).map((principle, index) => (
               <article className="card card--warm principle" key={principle.title}>
                 <span className="principle__number pixel">{String(index + 1).padStart(2, '0')}</span>
+                <PixelIcon name={principle.icon} size={40} className="principle__icon" />
                 <h3 className="card__title">{principle.title}</h3>
                 <p className="card__body">{principle.body}</p>
               </article>

@@ -1,9 +1,20 @@
 import { useState } from 'react';
 import { ExternalIcon } from '../components/Icons';
+import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
 import { SponsorPlate } from '../components/SponsorPlate';
 import { pastEvents, type PastEvent } from '../data/archive';
 import { advancedResources, problemSets, resources } from '../data/resources';
+
+/** An icon for a round or highlight, from its name. */
+function iconFor(name: string): PixelIconName {
+  const n = name.toLowerCase();
+  if (n.includes('proof')) return 'doc';
+  if (n.includes('team')) return 'people';
+  if (n.includes('guts') || n.includes('elimination')) return 'bolt';
+  if (n.includes('individual')) return 'idcard';
+  return 'star';
+}
 
 function EventSection({ event }: { event: PastEvent }) {
   return (
@@ -55,6 +66,7 @@ function EventSection({ event }: { event: PastEvent }) {
           <div className="grid grid--3">
             {event.highlights.map((item) => (
               <div className="card" key={item.name}>
+                <PixelIcon name={iconFor(item.name)} size={36} className="icon-card__icon" />
                 <h4 className="card__title">{item.name}</h4>
                 <p className="card__body">{item.detail}</p>
               </div>
@@ -69,6 +81,7 @@ function EventSection({ event }: { event: PastEvent }) {
           <div className="grid grid--3">
             {event.rounds.map((round) => (
               <div className="card" key={round.name}>
+                <PixelIcon name={iconFor(round.name)} size={36} className="icon-card__icon" />
                 <h4 className="card__title">{round.name}</h4>
                 <p className="card__body">{round.detail}</p>
                 {round.meta && <p className="dive__round-meta mono">{round.meta}</p>}

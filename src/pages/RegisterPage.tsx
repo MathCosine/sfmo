@@ -3,7 +3,8 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { asset } from '../lib/asset';
-import { LIABILITY_WAIVER, MEDIA_RELEASE } from '../data/waivers';
+import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
+import { LIABILITY_WAIVER, MEDIA_RELEASE, MEDIA_RELEASE_GIST } from '../data/waivers';
 import {
   DIVISIONS,
   IN_PERSON_RADIUS_MILES,
@@ -28,15 +29,74 @@ import {
 } from '../lib/registration';
 import { isSupabaseConfigured } from '../lib/supabase';
 
-const WHAT_WE_ASK = [
-  `Your division — in person, or online if every member lives more than ${IN_PERSON_RADIUS_MILES} miles from the Bay Area`,
-  'A team name, and the school or club you are representing',
-  `Up to ${sfmo2027.maxTeamSize} competitors — name, grade, and email for each`,
-  'One contact person we can reach about logistics',
-  'A media release and a liability waiver, signed by your team captain — plus the name and email of each competitor\'s parent or guardian, who signs the waiver for them',
-  `A completely optional donation — we suggest $${donation.perCompetitor} per competitor, and every team is welcome either way`,
-  'Agreement to the competition policies, published before registration opens',
+type IconItem = { icon: PixelIconName; title: string; body: string };
+
+const HOW_IT_WORKS: IconItem[] = [
+  {
+    icon: 'doc',
+    title: 'Fill in the form',
+    body: "A few minutes. Have each competitor's parent or guardian's name and email to hand.",
+  },
+  {
+    icon: 'idcard',
+    title: 'Get your IDs at once',
+    body: 'Your team number and every competitor ID appear the moment you submit.',
+  },
+  {
+    icon: 'envelope',
+    title: 'Check your inbox',
+    body: 'A confirmation for your team, and a short note for each parent or guardian.',
+  },
 ];
+
+const WHAT_WE_ASK: IconItem[] = [
+  {
+    icon: 'sub',
+    title: 'Your division',
+    body: `In person, or online if every member lives more than ${IN_PERSON_RADIUS_MILES} miles from the Bay Area.`,
+  },
+  {
+    icon: 'pin',
+    title: 'Your team',
+    body: 'A team name, your school or club, and one contact person we can reach.',
+  },
+  {
+    icon: 'idcard',
+    title: 'Competitors',
+    body: `Up to ${sfmo2027.maxTeamSize} — name, grade and email for each.`,
+  },
+  {
+    icon: 'shield',
+    title: 'Two waivers',
+    body: "A media release and a liability waiver: your captain signs, plus each competitor's parent or guardian.",
+  },
+  {
+    icon: 'heart',
+    title: 'A donation, if you like',
+    body: `Completely optional. We suggest $${donation.perCompetitor} per competitor; every team is welcome either way.`,
+  },
+  {
+    icon: 'check',
+    title: 'The policies',
+    body: 'Agreement to the competition policies, published before registration opens.',
+  },
+];
+
+function IconGrid({ items, className }: { items: IconItem[]; className: string }) {
+  return (
+    <ol className={className}>
+      {items.map((item) => (
+        <li key={item.title}>
+          <PixelIcon name={item.icon} size={36} />
+          <div>
+            <p className="icon-grid__title">{item.title}</p>
+            <p className="icon-grid__body">{item.body}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 const METHODS: Record<DonationMethod, { label: string; detail: string }> = {
   zelle: { label: 'Zelle', detail: donation.zelle },
@@ -55,25 +115,56 @@ function normaliseName(name: string) {
 /** Both documents, in full. Text lives in src/data/waivers.ts. */
 function WaiverDocs() {
   return (
-    <>
-      <h3 className="doc__title">Media release</h3>
-      <div className="release">
-        <p>{MEDIA_RELEASE}</p>
-      </div>
+    <div className="docs">
+      <article className="doc">
+        <header className="doc__head">
+          <PixelIcon name="camera" size={44} />
+          <div>
+            <h3 className="doc__title">Media release</h3>
+            <p className="doc__who label">Signed by the team captain, for the whole team</p>
+          </div>
+        </header>
+        <p className="doc__gist">
+          <strong>In short:</strong> {MEDIA_RELEASE_GIST}
+        </p>
+        <div className="release">
+          <p>{MEDIA_RELEASE}</p>
+        </div>
+      </article>
 
-      <h3 className="doc__title">Liability waiver</h3>
-      <div className="release">
-        <p>{LIABILITY_WAIVER.intro}</p>
-        <ol className="doc__clauses">
-          {LIABILITY_WAIVER.clauses.map((clause) => (
-            <li key={clause.title}>
-              <strong>{clause.title}.</strong> {clause.text}
-            </li>
-          ))}
-        </ol>
-        <p>{LIABILITY_WAIVER.signing}</p>
-      </div>
-    </>
+      <article className="doc">
+        <header className="doc__head">
+          <PixelIcon name="shield" size={44} />
+          <div>
+            <h3 className="doc__title">Liability waiver</h3>
+            <p className="doc__who label">
+              Signed by a parent or guardian for each competitor (18+: by the competitor)
+            </p>
+          </div>
+        </header>
+        <p className="doc__gist">
+          <strong>In short:</strong> {LIABILITY_WAIVER.gist} The full text below is what you agree
+          to.
+        </p>
+        <div className="release">
+          <p>{LIABILITY_WAIVER.intro}</p>
+          <ol className="clauses">
+            {LIABILITY_WAIVER.clauses.map((clause, index) => (
+              <li className="clause" key={clause.title}>
+                <span className="clause__badge">
+                  <PixelIcon name={clause.icon} size={26} />
+                  <span className="clause__num label">{index + 1}</span>
+                </span>
+                <p>
+                  <strong>{clause.title}.</strong> {clause.text}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <p className="doc__signing">{LIABILITY_WAIVER.signing}</p>
+        </div>
+      </article>
+    </div>
   );
 }
 
@@ -980,13 +1071,14 @@ export function RegisterPage() {
                 }
               />
 
+              <div className="locked__how">
+                <h3 className="dive__subhead">How it works</h3>
+                <IconGrid items={HOW_IT_WORKS} className="icon-grid icon-grid--steps" />
+              </div>
+
               <div className="locked__what">
                 <h3 className="dive__subhead">What we will ask for</h3>
-                <ul className="ticks">
-                  {WHAT_WE_ASK.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <IconGrid items={WHAT_WE_ASK} className="icon-grid icon-grid--ask" />
               </div>
 
               <div className="btn-row">
@@ -1016,6 +1108,7 @@ export function RegisterPage() {
                   </div>
                 </div>
               )}
+              <IconGrid items={HOW_IT_WORKS} className="icon-grid icon-grid--steps reg-steps" />
               <RegistrationForm settings={settings} />
             </div>
           )}

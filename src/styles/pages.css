@@ -272,23 +272,6 @@
   color: var(--ink-faint);
 }
 
-.community__foot {
-  margin-top: 1.5rem;
-  text-align: center;
-  font-family: var(--font-label);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.community__foot a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  text-decoration: none;
-  border-bottom: 2px solid var(--sub);
-}
-
 /* --------------------------------------------------------------------------
    Yearly calendar
    -------------------------------------------------------------------------- */

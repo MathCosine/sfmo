@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ExternalIcon } from '../components/Icons';
 import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
@@ -144,7 +145,17 @@ function EventSection({ event }: { event: PastEvent }) {
 }
 
 function EventTabs() {
-  const [active, setActive] = useState(pastEvents[0].id);
+  // /archive#sfmo-2026 opens that edition's tab (the home page links here).
+  const { hash } = useLocation();
+  const fromHash = pastEvents.find((event) => `#${event.id}` === hash)?.id;
+  const [active, setActive] = useState(fromHash ?? pastEvents[0].id);
+
+  useEffect(() => {
+    if (!fromHash) return;
+    setActive(fromHash);
+    document.getElementById('archive-tabs')?.scrollIntoView();
+  }, [fromHash]);
+
   const current = pastEvents.find((event) => event.id === active) ?? pastEvents[0];
 
   /** Left/right arrows move between tabs, as keyboard users expect. */
@@ -160,7 +171,13 @@ function EventTabs() {
 
   return (
     <>
-      <div className="tabs" role="tablist" aria-label="Past events" onKeyDown={onKeyDown}>
+      <div
+        className="tabs"
+        id="archive-tabs"
+        role="tablist"
+        aria-label="Past events"
+        onKeyDown={onKeyDown}
+      >
         {pastEvents.map((event) => (
           <button
             key={event.id}

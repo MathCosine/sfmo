@@ -20,6 +20,8 @@ export type PastEvent = {
   locationLabel: string;
   headline: string;
   summary: string;
+  /** One line for the home page's track record; condensed from `summary`. */
+  teaser: string;
   stats: FactEntry[];
   divisions?: DivisionEntry[];
   rounds?: RoundEntry[];
@@ -41,6 +43,7 @@ export const pastEvents: PastEvent[] = [
     dateLabel: 'Held August 29th, 2026',
     locationLabel: 'Online — Worldwide',
     headline: 'San Francisco Proof Open 2026',
+    teaser: 'Team proof-writing for grades 5–12, in two divisions, with a Guts Round to finish.',
     summary:
       'A team-based proof-writing competition for grades 5–12, featuring two divisions, individual proof problems, and a fast-paced Guts Round. Thank you to every student, coach, volunteer, and supporter who made SFPO possible!',
     stats: [
@@ -75,6 +78,7 @@ export const pastEvents: PastEvent[] = [
     dateLabel: 'Held May 2nd, 2026',
     locationLabel: 'Online — Worldwide',
     headline: 'San Francisco Mini Math Meet 2026',
+    teaser: 'A full day online for grades 3–12: two divisions, three rounds, over $1,000 in prizes.',
     summary:
       'A free, full-day online competition for grades 3–12, run by the SFMO team. Two divisions (Middle School and High School), three exciting rounds, and over $1,000 in prizes. Thank you to every student, coach, and volunteer who joined us!',
     stats: [
@@ -133,6 +137,7 @@ export const pastEvents: PastEvent[] = [
     dateLabel: 'Held 2026',
     locationLabel: 'Online',
     headline: 'San Francisco Math Open 2026',
+    teaser: 'Where it started: over 80 competitors and over $2,000 in prizes.',
     summary:
       'The inaugural San Francisco Math Open brought together over 80 talented competitors and distributed over $2,000 in prizes — a celebration of mathematical curiosity and community. Thank you to the sponsors below who made it possible.',
     stats: [

@@ -5,10 +5,12 @@ import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon, ExternalIcon } from '../components/Icons';
 import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
 import { PixelWave } from '../components/PixelWave';
-import { RadiusMap } from '../components/RadiusMap';
+import { Portrait } from '../components/Portrait';
 import { SeoHead } from '../components/SeoHead';
 import { SponsorWall } from '../components/SponsorWall';
+import { pastEvents } from '../data/archive';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
+import { staff } from '../data/staff';
 import { asset } from '../lib/asset';
 import {
   DIVISIONS,
@@ -30,6 +32,49 @@ const publicDay = timedSchedule.filter((segment) => !segment.staffOnly);
 const doorsOpen = publicDay[0];
 const dayEnds = publicDay[publicDay.length - 1];
 const describedRounds = rounds.filter((round) => !round.mystery).length;
+
+/** The essentials, all derived from config so they never drift from it. */
+const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail: string }> = [
+  {
+    icon: 'clock',
+    label: 'When',
+    value: sfmo2027.dateLabel,
+    detail: `One day: doors at ${clock(doorsOpen.start)}, done by ${clock(dayEnds.end)}`,
+  },
+  {
+    icon: 'pin',
+    label: 'Where',
+    value: 'San Francisco',
+    detail: `Venue being finalised · online division for teams ${IN_PERSON_RADIUS_MILES}+ miles away`,
+  },
+  {
+    icon: 'people',
+    label: 'Who',
+    value: 'Any student',
+    detail: `No qualification needed · teams of up to ${sfmo2027.maxTeamSize}`,
+  },
+  {
+    icon: 'star',
+    label: 'Rounds',
+    value: rounds.map((round) => round.name).join(' · '),
+    detail: `${capitalise(formatDuration(totalRoundMinutes))} of problems`,
+  },
+  {
+    icon: 'heart',
+    label: 'Cost',
+    value: 'Free',
+    detail: 'A donation is suggested at registration, and it is completely optional',
+  },
+  {
+    icon: 'idcard',
+    label: 'Registration',
+    value: `Opens ${sfmo2027.registrationOpensLabel}`,
+    detail: 'Every competitor gets an ID the moment you register',
+  },
+];
+
+/** Oldest first, so the track record reads as a story leading to 2027. */
+const trackRecord = [...pastEvents].reverse();
 
 const EXPLORE: Array<{ to: string; icon: PixelIconName; eyebrow: string; title: string; body: string }> = [
   {
@@ -153,13 +198,27 @@ export function HomePage() {
       </section>
 
       {/* ---------------------------------------------------------------- */}
-      <section className="section section--tight divisions">
+      <section className="section section--tight glance">
         <div className="wrap">
           <div className="section-head">
-            <p className="eyebrow">Two divisions</p>
-            <h2>In person, or online</h2>
+            <p className="eyebrow">The essentials</p>
+            <h2>SFMO 2027 at a glance</h2>
           </div>
-          <div className="divisions__layout">
+
+          <div className="glance__layout">
+            <dl className="glance-sheet">
+              {GLANCE.map((row) => (
+                <div className="glance-sheet__row" key={row.label}>
+                  <PixelIcon name={row.icon} size={36} />
+                  <dt className="label">{row.label}</dt>
+                  <dd>
+                    <strong>{row.value}</strong>
+                    <span>{row.detail}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
             <div className="divisions__cards">
               <article className="card division-card">
                 <PixelIcon name="sub" size={56} className="division-card__icon" />
@@ -193,22 +252,99 @@ export function HomePage() {
                 </p>
               </div>
             </div>
-
-            <figure className="sonar-panel">
-              <RadiusMap />
-              <figcaption className="sonar-panel__legend">
-                <span>
-                  <i className="sonar-key" /> In person
-                </span>
-                <span>
-                  <i className="sonar-key sonar-key--out" /> Online
-                </span>
-                <span className="sonar-panel__note">
-                  Drawn to scale from San Francisco. Near the line? Email us.
-                </span>
-              </figcaption>
-            </figure>
           </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      <section className="section who">
+        <div className="wrap">
+          <div className="who__intro">
+            <div className="section-head">
+              <p className="eyebrow">Who we are</p>
+              <h2>Run by students, for students</h2>
+              <p className="lede">
+                The San Francisco Math Initiative is a student-run nonprofit that writes and hosts
+                free mathematics competitions — three a year, one every season, open to anyone who
+                wants to sit them.
+              </p>
+            </div>
+
+            <Link to="/team" className="crew-strip">
+              <span className="crew-strip__faces" aria-hidden="true">
+                {staff.map((member) => (
+                  <span className="crew-strip__face" key={member.slug}>
+                    <Portrait
+                      slug={member.slug}
+                      name={member.name}
+                      position={member.photoPosition}
+                    />
+                  </span>
+                ))}
+              </span>
+              <span className="crew-strip__caption">
+                {capitalise(numberWord(staff.length))} students write the problems, run the day
+                and build the platform.
+              </span>
+              <span className="crew-strip__more label">
+                Meet the team <ArrowIcon />
+              </span>
+            </Link>
+          </div>
+
+          <div className="grid grid--3 who__stats">
+            {communityStats.map((stat) => (
+              <div className="stat" key={stat.label}>
+                <p className="stat__value">{stat.value}</p>
+                <p className="stat__label">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="who__map-link">
+            <Link to="/about">
+              See the {participantCountryWord} countries our competitors have written in{' '}
+              <span className="nowrap">
+                from <ArrowIcon />
+              </span>
+            </Link>
+          </p>
+
+          <h3 className="dive__subhead who__subhead">Our contests so far</h3>
+          <ol className="track">
+            {trackRecord.map((event) => (
+              <li className="track__item" key={event.id}>
+                <Link className="track__card" to={{ pathname: '/archive', hash: `#${event.id}` }}>
+                  <span className="track__code pixel">{event.code}</span>
+                  <span className="track__name">{event.name}</span>
+                  <span className="track__when mono">
+                    {event.dateLabel.replace(/^Held /, '')} · {event.locationLabel}
+                  </span>
+                  <span className="track__teaser">{event.teaser}</span>
+                  <span className="track__stats">
+                    {event.stats.map((fact) => (
+                      <span key={fact.label}>
+                        <strong>{fact.value}</strong> {fact.label.toLowerCase()}
+                      </span>
+                    ))}
+                  </span>
+                </Link>
+              </li>
+            ))}
+            <li className="track__item track__item--next">
+              <Link className="track__card" to="/register">
+                <span className="track__code pixel">{sfmo2027.code}</span>
+                <span className="track__name">{sfmo2027.edition}</span>
+                <span className="track__when mono">{sfmo2027.dateLabel} · San Francisco + online</span>
+                <span className="track__teaser">
+                  In person in San Francisco, with an online division. Registration opens{' '}
+                  {sfmo2027.registrationOpensLabel}.
+                </span>
+                <span className="track__next label">
+                  Next up <ArrowIcon />
+                </span>
+              </Link>
+            </li>
+          </ol>
         </div>
       </section>
 
@@ -348,38 +484,6 @@ export function HomePage() {
                 </details>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------------- */}
-      <section className="section section--tight">
-        <div className="wrap">
-          <div className="panel community">
-            <div className="section-head section-head--center">
-              <p className="eyebrow">A growing community</p>
-              <h2>Math has no borders</h2>
-              <p className="lede">
-                Students from around the world have joined our contests, shared their solutions, and
-                helped build this community.
-              </p>
-            </div>
-
-            <div className="grid grid--3">
-              {communityStats.map((stat) => (
-                <div className="stat" key={stat.label}>
-                  <p className="stat__value">{stat.value}</p>
-                  <p className="stat__label">{stat.label}</p>
-                  <p className="community__detail">{stat.detail}</p>
-                </div>
-              ))}
-            </div>
-
-            <p className="community__foot">
-              <Link to="/about">
-                See where our competitors have written in from <ArrowIcon />
-              </Link>
-            </p>
           </div>
         </div>
       </section>

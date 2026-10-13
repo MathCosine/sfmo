@@ -18,9 +18,9 @@ export const competitions: Competition[] = [
     glyph: 'Open',
     name: 'San Francisco Math Open',
     kind: 'Flagship',
-    dateLabel: 'January 2027',
+    dateLabel: 'January 16, 2027',
     status: 'upcoming',
-    blurb: 'Our flagship competition returns in person to San Francisco next January.',
+    blurb: 'Our flagship competition returns in person to San Francisco on Saturday, January 16, 2027.',
   },
   {
     code: 'SFM3',

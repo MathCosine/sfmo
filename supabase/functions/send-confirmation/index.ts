@@ -37,6 +37,7 @@
 
 // Mirrors `donation` in src/lib/config.ts — change both together.
 const PER_COMPETITOR = 10;
+const EVENT_DATE = 'Saturday, January 16, 2027'; // sfmo2027.dayLabel
 const ZELLE = '(925) 997-8182';
 const DONATE_URL = 'https://sfmathacademy.com/donate';
 
@@ -132,7 +133,7 @@ export function teamEmail(c: Claim, siteUrl: string) {
   const text = [
     `Hi ${c.contact_name ?? 'there'},`,
     '',
-    `${c.team_name} is registered for the San Francisco Math Open 2027.`,
+    `${c.team_name} is registered for the San Francisco Math Open 2027, on ${EVENT_DATE}.`,
     '',
     `Team ID: ${c.team_code}`,
     `Division: ${divisionLabel(c.division)}`,
@@ -154,7 +155,7 @@ export function teamEmail(c: Claim, siteUrl: string) {
   const li = (s: string) => `<li style="margin:4px 0">${escapeHtml(s)}</li>`;
   const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#0a2b3f;max-width:560px">
 <p>Hi ${escapeHtml(c.contact_name ?? 'there')},</p>
-<p><strong>${escapeHtml(c.team_name)}</strong> is registered for the San Francisco Math Open 2027.</p>
+<p><strong>${escapeHtml(c.team_name)}</strong> is registered for the San Francisco Math Open 2027, on <strong>${EVENT_DATE}</strong>.</p>
 <table style="border-collapse:collapse;margin:12px 0"><tr><td style="padding:2px 14px 2px 0;color:#3d6377">Team ID</td><td style="font-family:ui-monospace,monospace;font-weight:700">${escapeHtml(c.team_code)}</td></tr>
 <tr><td style="padding:2px 14px 2px 0;color:#3d6377">Division</td><td>${escapeHtml(divisionLabel(c.division))}</td></tr></table>
 <p style="margin-bottom:4px"><strong>Competitor IDs</strong> — each competitor writes theirs on every answer sheet:</p>

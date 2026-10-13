@@ -40,7 +40,7 @@ const ROUTES: RouteMeta[] = [
     path: '',
     title: 'SFMO 2027 — San Francisco Math Open',
     description:
-      'The San Francisco Math Open returns in person to San Francisco in January 2027. A free math competition for students, run by students.',
+      'The San Francisco Math Open returns in person to San Francisco on January 16, 2027. A free math competition for students, run by students.',
     priority: '1.0',
   },
   {

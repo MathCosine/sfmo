@@ -38,8 +38,8 @@ const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail:
   {
     icon: 'clock',
     label: 'When',
-    value: sfmo2027.dateLabel,
-    detail: `One day: doors at ${clock(doorsOpen.start)}, done by ${clock(dayEnds.end)}`,
+    value: sfmo2027.dayLabel,
+    detail: `Doors at ${clock(doorsOpen.start)}, done by ${clock(dayEnds.end)}`,
   },
   {
     icon: 'pin',
@@ -112,7 +112,7 @@ export function HomePage() {
     <>
       <SeoHead
         title="SFMO 2027 — San Francisco Math Open"
-        description="The San Francisco Math Open returns in person to San Francisco in January 2027. A free math competition for students, run by students."
+        description="The San Francisco Math Open returns in person to San Francisco on January 16, 2027. A free math competition for students, run by students."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -141,7 +141,9 @@ export function HomePage() {
               <br />
               Math Open
             </h1>
-            <p className="hero__date pixel">January 2027</p>
+            <p className="hero__date pixel">
+              <time dateTime={sfmo2027.date}>{sfmo2027.dateLabel}</time>
+            </p>
             <p className="hero__where">
               In person in San Francisco · Online division · Teams of up to{' '}
               {sfmo2027.maxTeamSize}
@@ -432,7 +434,8 @@ export function HomePage() {
             <p className="eyebrow">Competition day</p>
             <h2>How the day runs</h2>
             <p className="deep-band__note">
-              One day in January: doors at {clock(doorsOpen.start)}, done by {clock(dayEnds.end)}.
+              {sfmo2027.dayLabel}: doors at {clock(doorsOpen.start)}, done by{' '}
+              {clock(dayEnds.end)}.
               Exact times land once the venue is confirmed — this is the shape of it.
             </p>
           </div>

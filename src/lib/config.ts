@@ -49,7 +49,10 @@ export const sfmo2027 = {
   name: 'San Francisco Math Open',
   edition: 'SFMO 2027',
   theme: 'Under the Sea',
-  dateLabel: 'January 2027',
+  /** Competition day. The confirmation email repeats it (send-confirmation). */
+  date: '2027-01-16',
+  dateLabel: 'January 16, 2027',
+  dayLabel: 'Saturday, January 16, 2027',
   locationLabel: 'In person · San Francisco',
   registrationOpensAt: '2026-10-24T00:00:00-07:00',
   registrationOpensLabel: 'October 24, 2026',
@@ -212,8 +215,8 @@ export const faq = [
     a: 'Only if you live more than 100 miles from the Bay Area. Anyone closer — from San Francisco and the Peninsula to the South Bay, the East Bay, the North Bay, and out as far as Sacramento, Santa Cruz and Monterey — competes in person.',
   },
   {
-    q: 'When is the exact date and venue?',
-    a: 'The in-person venue is still being finalised; we will announce it, with the exact date, as soon as both are confirmed. It is a single day in January 2027, in San Francisco, finishing in the early afternoon.',
+    q: 'When and where is it?',
+    a: 'Saturday, January 16, 2027, in San Francisco, finishing in the early afternoon. The in-person venue is still being finalised, and we will announce it as soon as it is confirmed.',
   },
   {
     q: 'How do the competitor IDs work?',

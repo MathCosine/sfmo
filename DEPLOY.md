@@ -38,24 +38,36 @@ cached, and no source maps are produced, which keeps it near the floor.
 
 ## 2. Moving to a custom domain (sfmathopen.org / sfmoofficial.org)
 
-The base path is not hard-coded anywhere. To switch:
+Connecting a domain to GitHub Pages is free: you only pay the registrar
+(Spaceship, Namecheap, Cloudflare…) for the domain itself. The base path is
+not hard-coded anywhere, so the switch is settings only, with no code change.
 
-**Step 1 — DNS at your registrar.** For an apex domain (`sfmathopen.org`),
-create four `A` records pointing at GitHub's Pages IPs:
+**Step 1 — verify the domain with GitHub (recommended).** This stops anyone
+else from pointing your domain at their own Pages site. On GitHub: your
+profile picture → **Settings → Pages** (under "Code, planning, and
+automation") → **Add a domain**. GitHub shows a `TXT` record; add it at your
+registrar (step 2's DNS page), then click **Verify**.
 
-```
-185.199.108.153
-185.199.109.153
-185.199.110.153
-185.199.111.153
-```
+**Step 2 — DNS at your registrar.** On the domain's DNS records page, first
+delete any records the registrar added for `@` and `www` (a parking page or
+forwarding), then add:
 
-Also add a `CNAME` record for `www` → `mathcosine.github.io.`
+| Type    | Host / Name | Value                    |
+| ------- | ----------- | ------------------------ |
+| `A`     | `@`         | `185.199.108.153`        |
+| `A`     | `@`         | `185.199.109.153`        |
+| `A`     | `@`         | `185.199.110.153`        |
+| `A`     | `@`         | `185.199.111.153`        |
+| `AAAA`  | `@`         | `2606:50c0:8000::153`    |
+| `AAAA`  | `@`         | `2606:50c0:8001::153`    |
+| `AAAA`  | `@`         | `2606:50c0:8002::153`    |
+| `AAAA`  | `@`         | `2606:50c0:8003::153`    |
+| `CNAME` | `www`       | `mathcosine.github.io`   |
 
-If you would rather use `www.sfmathopen.org` as the real address, skip the
-`A` records and just point `www` at `mathcosine.github.io.`
+The `AAAA` (IPv6) records are optional but recommended. DNS changes can take
+up to 24 hours to spread, though usually far less.
 
-**Step 2 — repository variables.** Settings → Secrets and variables →
+**Step 3 — repository variables.** Settings → Secrets and variables →
 Actions → **Variables** tab → New repository variable:
 
 | Name            | Value                        |
@@ -64,15 +76,28 @@ Actions → **Variables** tab → New repository variable:
 | `SITE_URL`      | `https://sfmathopen.org/`    |
 | `CUSTOM_DOMAIN` | `sfmathopen.org`             |
 
-**Step 3 — Settings → Pages → Custom domain.** Enter the domain and tick
-**Enforce HTTPS** once the certificate is issued (can take up to an hour).
+**Step 4 — Settings → Pages → Custom domain**, enter `sfmathopen.org`,
+**Save**, and wait for the DNS check to pass. Then straight away:
 
-**Step 4 — redeploy.** Actions → *Deploy to GitHub Pages* → **Run workflow**.
-No commit needed.
+**Step 5 — redeploy.** Actions → *Deploy to GitHub Pages* → **Run workflow**.
+Do steps 4 and 5 back to back: once the custom domain is saved, GitHub
+redirects `mathcosine.github.io/sfmo` to the new domain, and the site only
+loads there after this rebuild (about two minutes).
+
+**Step 6 — HTTPS.** Back in Settings → Pages, tick **Enforce HTTPS** once it
+becomes available — GitHub says this can take up to 24 hours.
+
+**Step 7 — tell the other services.**
+- Supabase → Edge Functions → Secrets: set `SITE_URL` to
+  `https://sfmathopen.org/`, so links in the confirmation emails point at the
+  new address.
+- Google Search Console: see section 3.
 
 That is the whole switch. `SITE_BASE` drives Vite's `base`, the router's
 `basename`, and every asset URL; `SITE_URL` drives canonical tags, Open Graph
-URLs and `sitemap.xml`.
+URLs and `sitemap.xml`. The deploy writes a `CNAME` file when
+`CUSTOM_DOMAIN` is set; GitHub ignores it for Actions deploys (the Pages
+setting is what counts), but it does no harm.
 
 ---
 

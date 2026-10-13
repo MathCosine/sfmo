@@ -132,9 +132,15 @@ function staticSiteFiles(): Plugin {
       }
 
       // Unknown URLs: the shell boots and the router renders our 404 page.
+      // A missing page has no canonical address of its own (pointing it at
+      // the home page would read as a soft 404), and must not be indexed.
       writeFileSync(
         resolve(outDir, '404.html'),
-        shell.replace(/<title>[\s\S]*?<\/title>/, '<title>Page not found — SFMO</title>'),
+        shell
+          .replace(/<title>[\s\S]*?<\/title>/, '<title>Page not found — SFMO</title>')
+          .replace(/\s*<link rel="canonical"[^>]*>/, '')
+          .replace(/\s*<meta property="og:url"[^>]*>/, '')
+          .replace('</head>', '  <meta name="robots" content="noindex" />\n  </head>'),
       );
 
       const urls = ROUTES.map(

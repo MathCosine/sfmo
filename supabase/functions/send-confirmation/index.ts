@@ -38,6 +38,7 @@
 // Mirrors `donation` in src/lib/config.ts — change both together.
 const PER_COMPETITOR = 10;
 const EVENT_DATE = 'Saturday, January 16, 2027'; // sfmo2027.dayLabel
+const VENUE_AREA = 'South Bay / San Francisco'; // sfmo2027.venueArea
 const ZELLE = '(925) 997-8182';
 const DONATE_URL = 'https://sfmathacademy.com/donate';
 
@@ -105,7 +106,7 @@ async function release(teamCode: string) {
 }
 
 const divisionLabel = (d: Claim['division']) =>
-  d === 'online' ? 'Online' : d === 'in_person' ? 'In person (San Francisco — venue still being finalised)' : '—';
+  d === 'online' ? 'Online' : d === 'in_person' ? `In person (${VENUE_AREA} — venue still being finalised)` : '—';
 
 function donation(c: Claim) {
   const memo = `SFMO 2027 Team ${c.team_code}`;

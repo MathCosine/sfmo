@@ -1044,7 +1044,8 @@ export function RegisterPage() {
           <p className="eyebrow">SFMO 2027</p>
           <h1>Register a Team</h1>
           <p className="lede">
-            Teams of up to {sfmo2027.maxTeamSize}, free to enter — in person in San Francisco, or
+            Teams of up to {sfmo2027.maxTeamSize}, free to enter — in person in the{' '}
+            {sfmo2027.venueArea}, or
             online if your team lives more than {IN_PERSON_RADIUS_MILES} miles from the Bay Area. Every
             competitor gets an ID the moment you register.
           </p>

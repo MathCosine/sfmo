@@ -53,7 +53,10 @@ export const sfmo2027 = {
   date: '2027-01-16',
   dateLabel: 'January 16, 2027',
   dayLabel: 'Saturday, January 16, 2027',
-  locationLabel: 'In person · San Francisco',
+  /** Where the in-person event will be; the exact venue is still being finalised.
+   *  The confirmation email repeats it (send-confirmation). */
+  venueArea: 'South Bay / San Francisco',
+  locationLabel: 'In person · South Bay / San Francisco',
   registrationOpensAt: '2026-10-24T00:00:00-07:00',
   registrationOpensLabel: 'October 24, 2026',
   maxTeamSize: 4,
@@ -216,7 +219,7 @@ export const faq = [
   },
   {
     q: 'When and where is it?',
-    a: 'Saturday, January 16, 2027, in San Francisco, finishing in the early afternoon. The in-person venue is still being finalised, and we will announce it as soon as it is confirmed.',
+    a: 'Saturday, January 16, 2027, in the South Bay / San Francisco, finishing in the early afternoon. The exact venue is still being finalised, and we will announce it as soon as it is confirmed.',
   },
   {
     q: 'How do the competitor IDs work?',
@@ -231,7 +234,7 @@ export const faq = [
 export const DIVISIONS = {
   in_person: {
     label: 'In person',
-    detail: 'San Francisco · venue still being finalised',
+    detail: 'South Bay / San Francisco · venue still being finalised',
   },
   online: {
     label: 'Online',

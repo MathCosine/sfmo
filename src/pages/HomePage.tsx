@@ -44,7 +44,7 @@ const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail:
   {
     icon: 'pin',
     label: 'Where',
-    value: 'San Francisco',
+    value: sfmo2027.venueArea,
     detail: `Venue being finalised · online division for teams ${IN_PERSON_RADIUS_MILES}+ miles away`,
   },
   {
@@ -112,7 +112,7 @@ export function HomePage() {
     <>
       <SeoHead
         title="SFMO 2027 — San Francisco Math Open"
-        description="The San Francisco Math Open returns in person to San Francisco on January 16, 2027. A free math competition for students, run by students."
+        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for students, run by students."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -145,12 +145,12 @@ export function HomePage() {
               <time dateTime={sfmo2027.date}>{sfmo2027.dateLabel}</time>
             </p>
             <p className="hero__where">
-              In person in San Francisco · Online division · Teams of up to{' '}
+              In person in the {sfmo2027.venueArea} · Online division · Teams of up to{' '}
               {sfmo2027.maxTeamSize}
             </p>
             <p className="hero__blurb">
-              Our flagship competition comes home. One day, one city, and a set of problems written
-              by students who still remember what it feels like to sit the contest.
+              Our flagship competition comes home. One day in the Bay Area, and a set of problems
+              written by students who still remember what it feels like to sit the contest.
             </p>
             <div className="btn-row hero__actions">
               <Link to="/register" className="btn btn--primary btn--lg">
@@ -226,7 +226,7 @@ export function HomePage() {
                 <PixelIcon name="sub" size={56} className="division-card__icon" />
                 <div>
                   <p className="card__eyebrow">{DIVISIONS.in_person.label}</p>
-                  <h3 className="card__title">San Francisco</h3>
+                  <h3 className="card__title">{sfmo2027.venueArea}</h3>
                   <p className="card__body">The main event. The venue is still being finalised.</p>
                   <p className="division-card__tag label">
                     Within {IN_PERSON_RADIUS_MILES} mi of the Bay Area
@@ -336,9 +336,12 @@ export function HomePage() {
               <Link className="track__card" to="/register">
                 <span className="track__code pixel">{sfmo2027.code}</span>
                 <span className="track__name">{sfmo2027.edition}</span>
-                <span className="track__when mono">{sfmo2027.dateLabel} · San Francisco + online</span>
+                <span className="track__when mono">
+                  {sfmo2027.dateLabel} · {sfmo2027.venueArea} + online
+                </span>
                 <span className="track__teaser">
-                  In person in San Francisco, with an online division. Registration opens{' '}
+                  In person in the {sfmo2027.venueArea}, with an online division. Registration
+                  opens{' '}
                   {sfmo2027.registrationOpensLabel}.
                 </span>
                 <span className="track__next label">
@@ -349,6 +352,8 @@ export function HomePage() {
           </ol>
         </div>
       </section>
+
+      <SponsorWall />
 
       {/* ---------------------------------------------------------------- */}
       <section className="section rounds">
@@ -422,8 +427,6 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
-      <SponsorWall />
 
       {/* ---------------------------------------------------------------- */}
       <section className="section deep-band">

@@ -94,6 +94,12 @@ alter table public.teams add column if not exists donation_method text
   check (donation_method is null or donation_method in ('zelle', 'online', 'checkin'));
 alter table public.teams add column if not exists donation_received boolean not null default false;
 alter table public.teams add column if not exists confirmation_sent_at timestamptz;
+-- Small teams (and solo competitors) can agree to be combined with others to
+-- make a full team. When staff combine two teams, the emptied team is
+-- cancelled and points at the team it joined.
+alter table public.teams add column if not exists open_to_merge boolean not null default false;
+alter table public.teams add column if not exists merged_into uuid
+  references public.teams (id) on delete set null;
 
 create index if not exists teams_contact_email_idx on public.teams (lower(contact_email));
 create index if not exists teams_status_idx on public.teams (status);
@@ -124,6 +130,25 @@ create unique index if not exists team_members_competitor_id_idx
 -- competitor's own name if 18 or older), and an address to confirm it to.
 alter table public.team_members add column if not exists guardian_name text;
 alter table public.team_members add column if not exists guardian_email text;
+
+-- The liability waiver is signed by that parent or guardian (or by a
+-- competitor who is 18 or older) through a private link containing
+-- waiver_token, emailed after registration. The signature record keeps who
+-- signed, when, from where, and exactly which document text (by id + hash).
+alter table public.team_members add column if not exists waiver_token uuid not null default gen_random_uuid();
+create unique index if not exists team_members_waiver_token_key on public.team_members (waiver_token);
+alter table public.team_members add column if not exists waiver_signed_name text;
+alter table public.team_members add column if not exists waiver_signed_at timestamptz;
+alter table public.team_members add column if not exists waiver_signer_role text
+  check (waiver_signer_role is null or waiver_signer_role in ('guardian', 'self'));
+alter table public.team_members add column if not exists waiver_signed_ip text;
+alter table public.team_members add column if not exists waiver_signed_ua text;
+alter table public.team_members add column if not exists waiver_doc_id text;
+alter table public.team_members add column if not exists waiver_doc_sha256 text;
+alter table public.team_members add column if not exists waiver_pdf_sent_at timestamptz;
+-- Set when staff combine teams: the team this competitor registered with.
+alter table public.team_members add column if not exists original_team_id uuid
+  references public.teams (id) on delete set null;
 
 -- Keep competitor_id in sync with the parent team's code, however the row
 -- was created (registration RPC, staff edit, or manual SQL).
@@ -368,7 +393,7 @@ begin
   end if;
 
   if coalesce((payload ->> 'liability_waiver')::boolean, false) is not true then
-    raise exception 'The team captain must confirm the liability waiver.' using errcode = 'P0001';
+    raise exception 'The team captain must confirm that each parent or guardian will sign the liability waiver.' using errcode = 'P0001';
   end if;
 
   -- Suggested donation: optional, so blank means none. Whole dollars only.
@@ -408,7 +433,7 @@ begin
     coach_name, coach_email, notes, agreed_policies,
     distance_attested, media_release, media_release_signed_by, media_release_signed_at,
     liability_waiver, liability_waiver_signed_by, liability_waiver_signed_at,
-    donation_pledge, donation_method
+    donation_pledge, donation_method, open_to_merge
   )
   values (
     team_name,
@@ -432,7 +457,9 @@ begin
     signer,
     now(),
     pledge,
-    method
+    method,
+    -- Only meaningful for a team with room in it.
+    coalesce((payload ->> 'open_to_merge')::boolean, false) and member_count < 4
   )
   returning * into new_team;
 
@@ -478,6 +505,14 @@ as $$
     'created_at', t.created_at,
     'donation_pledge', t.donation_pledge,
     'donation_method', t.donation_method,
+    'open_to_merge', t.open_to_merge,
+    'merged_into', (
+      select jsonb_build_object('team_code', i.team_code, 'team_name', i.team_name)
+      from public.teams i
+      where i.id = t.merged_into
+    ),
+    -- A combined team's receipt still lists its own competitors, under the
+    -- IDs they now have in the team they joined.
     'members', coalesce(
       (
         select jsonb_agg(
@@ -485,11 +520,13 @@ as $$
             'slot', m.slot,
             'competitor_id', m.competitor_id,
             'full_name', m.full_name,
-            'grade', m.grade
-          ) order by m.slot
+            'grade', m.grade,
+            'waiver_signed', m.waiver_signed_at is not null
+          ) order by m.competitor_id
         )
         from public.team_members m
         where m.team_id = t.id
+           or (t.merged_into is not null and m.team_id = t.merged_into and m.original_team_id = t.id)
       ),
       '[]'::jsonb
     )
@@ -513,7 +550,7 @@ begin
   from public.teams
   where team_code = lpad(btrim(p_team_code), 2, '0')
     and lower(contact_email) = lower(btrim(p_contact_email))
-    and status <> 'cancelled';
+    and (status <> 'cancelled' or merged_into is not null);
 
   if found_id is null then
     raise exception 'No team found for that team ID and email.' using errcode = 'P0001';
@@ -567,7 +604,9 @@ begin
             'competitor_id', m.competitor_id,
             'competitor_name', m.full_name,
             'guardian_name', m.guardian_name,
-            'guardian_email', m.guardian_email
+            'guardian_email', m.guardian_email,
+            'waiver_token', m.waiver_token,
+            'waiver_signed', m.waiver_signed_at is not null
           ) order by m.slot
         )
         from public.team_members m
@@ -583,6 +622,384 @@ revoke all on function public.claim_confirmation(text, text) from public, anon, 
 grant execute on function public.claim_confirmation(text, text) to service_role;
 grant execute on function public.is_staff() to authenticated;
 grant execute on function public.is_admin() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Liability waivers, signed through a private link
+-- ---------------------------------------------------------------------------
+-- A parent's link (one waiver_token) covers every competitor on the team who
+-- named the same parent or guardian email, so siblings are signed in one go.
+create or replace function public.waiver_group(p_token uuid)
+returns setof public.team_members
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select m.*
+  from public.team_members me
+  join public.team_members m on m.team_id = me.team_id
+  where me.waiver_token = p_token
+    and (
+      m.id = me.id
+      or (
+        coalesce(btrim(me.guardian_email), '') <> ''
+        and lower(btrim(m.guardian_email)) = lower(btrim(me.guardian_email))
+      )
+    );
+$$;
+
+-- What the signing page shows: the team, and each competitor the link covers.
+-- Deliberately no email addresses or other contact details.
+create or replace function public.get_waiver(p_token uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  me public.team_members;
+  t  public.teams;
+begin
+  select * into me from public.team_members where waiver_token = p_token;
+  if me.id is null then
+    raise exception 'This waiver link is not valid. Check the email you were sent, or contact us.'
+      using errcode = 'P0001';
+  end if;
+
+  select * into t from public.teams where id = me.team_id;
+  if t.status = 'cancelled' then
+    raise exception 'This team''s registration has been cancelled, so there is nothing to sign.'
+      using errcode = 'P0001';
+  end if;
+
+  return jsonb_build_object(
+    'team_code', t.team_code,
+    'team_name', t.team_name,
+    'division', t.division,
+    'guardian_name', me.guardian_name,
+    'competitors', (
+      select jsonb_agg(
+        jsonb_build_object(
+          'competitor_id', g.competitor_id,
+          'full_name', g.full_name,
+          'grade', g.grade,
+          'signed', g.waiver_signed_at is not null,
+          'signed_name', g.waiver_signed_name,
+          'signed_at', g.waiver_signed_at,
+          'signer_role', g.waiver_signer_role,
+          'is_link_owner', g.id = me.id
+        ) order by g.slot
+      )
+      from public.waiver_group(p_token) g
+    )
+  );
+end;
+$$;
+
+-- Signs the waiver for every unsigned competitor the link covers (or, for a
+-- competitor signing for themself, just that one). Records the typed name,
+-- the time, the signer's IP and browser, and the exact document signed.
+create or replace function public.sign_waiver(
+  p_token uuid,
+  p_signed_name text,
+  p_signer_role text,
+  p_agree boolean,
+  p_doc_id text,
+  p_doc_sha256 text,
+  p_user_agent text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  me      public.team_members;
+  t       public.teams;
+  signer  text := btrim(regexp_replace(coalesce(p_signed_name, ''), '\s+', ' ', 'g'));
+  headers jsonb;
+  ip      text;
+begin
+  select * into me from public.team_members where waiver_token = p_token;
+  if me.id is null then
+    raise exception 'This waiver link is not valid. Check the email you were sent, or contact us.'
+      using errcode = 'P0001';
+  end if;
+  select * into t from public.teams where id = me.team_id;
+  if t.status = 'cancelled' then
+    raise exception 'This team''s registration has been cancelled, so there is nothing to sign.'
+      using errcode = 'P0001';
+  end if;
+
+  if p_agree is not true then
+    raise exception 'Please tick the box to confirm you have read and agree to the waiver.'
+      using errcode = 'P0001';
+  end if;
+  if char_length(signer) < 2 or char_length(signer) > 120 then
+    raise exception 'Type your full legal name to sign.' using errcode = 'P0001';
+  end if;
+  if p_signer_role is null or p_signer_role not in ('guardian', 'self') then
+    raise exception 'Choose whether you are the parent or legal guardian, or the competitor.'
+      using errcode = 'P0001';
+  end if;
+  if coalesce(p_doc_id, '') !~ '^[a-z0-9-]{3,80}$' or coalesce(p_doc_sha256, '') !~ '^[0-9a-f]{64}$' then
+    raise exception 'The waiver document could not be verified. Reload the page and try again.'
+      using errcode = 'P0001';
+  end if;
+
+  -- PostgREST passes the request headers through; the first forwarded
+  -- address is the signer's. Best effort: absent outside an API call.
+  begin
+    headers := nullif(current_setting('request.headers', true), '')::jsonb;
+  exception when others then
+    headers := null;
+  end;
+  ip := coalesce(
+    nullif(btrim(headers ->> 'cf-connecting-ip'), ''),
+    nullif(btrim(split_part(coalesce(headers ->> 'x-forwarded-for', ''), ',', 1)), '')
+  );
+
+  update public.team_members m
+  set waiver_signed_name = signer,
+      waiver_signed_at = now(),
+      waiver_signer_role = p_signer_role,
+      waiver_signed_ip = left(ip, 100),
+      waiver_signed_ua = left(p_user_agent, 400),
+      waiver_doc_id = p_doc_id,
+      waiver_doc_sha256 = p_doc_sha256
+  where m.waiver_signed_at is null
+    and m.id in (
+      select g.id from public.waiver_group(p_token) g
+      where p_signer_role = 'guardian' or g.id = me.id
+    );
+
+  return public.get_waiver(p_token);
+end;
+$$;
+
+-- Everything a signed-waiver PDF needs, for the competitors the link covers
+-- who have signed. Service role only: it includes the signer's email and IP.
+create or replace function public.waiver_record(p_token uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  me public.team_members;
+  t  public.teams;
+begin
+  select * into me from public.team_members where waiver_token = p_token;
+  if me.id is null then
+    return null;
+  end if;
+  select * into t from public.teams where id = me.team_id;
+
+  return jsonb_build_object(
+    'team_code', t.team_code,
+    'team_name', t.team_name,
+    'division', t.division,
+    'status', t.status,
+    'guardian_name', me.guardian_name,
+    'guardian_email', me.guardian_email,
+    'waiver_token', me.waiver_token,
+    'competitors', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'competitor_id', g.competitor_id,
+          'full_name', g.full_name,
+          'grade', g.grade,
+          'signed', g.waiver_signed_at is not null,
+          'signed_name', g.waiver_signed_name,
+          'signed_at', g.waiver_signed_at,
+          'signer_role', g.waiver_signer_role,
+          'signed_ip', g.waiver_signed_ip,
+          'signed_ua', g.waiver_signed_ua,
+          'doc_id', g.waiver_doc_id,
+          'doc_sha256', g.waiver_doc_sha256,
+          'waiver_token', g.waiver_token
+        ) order by g.slot
+      )
+      from public.waiver_group(p_token) g
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+-- Claims the one automatic "here is your signed waiver" email for the
+-- competitors a link covers. Returns null if there is nothing new to send.
+create or replace function public.claim_waiver_pdf(p_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  claimed integer;
+begin
+  update public.team_members m
+  set waiver_pdf_sent_at = now()
+  where m.waiver_signed_at is not null
+    and m.waiver_pdf_sent_at is null
+    and m.id in (select g.id from public.waiver_group(p_token) g);
+  get diagnostics claimed = row_count;
+
+  if claimed = 0 then
+    return null;
+  end if;
+  return public.waiver_record(p_token);
+end;
+$$;
+
+revoke all on function public.waiver_group(uuid) from public, anon, authenticated;
+revoke all on function public.get_waiver(uuid) from public;
+revoke all on function public.sign_waiver(uuid, text, text, boolean, text, text, text) from public;
+revoke all on function public.waiver_record(uuid) from public, anon, authenticated;
+revoke all on function public.claim_waiver_pdf(uuid) from public, anon, authenticated;
+grant execute on function public.get_waiver(uuid) to anon, authenticated;
+grant execute on function public.sign_waiver(uuid, text, text, boolean, text, text, text) to anon, authenticated;
+grant execute on function public.waiver_record(uuid) to service_role;
+grant execute on function public.claim_waiver_pdf(uuid) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Combining teams (staff only)
+-- ---------------------------------------------------------------------------
+-- Moves every competitor of p_from into p_into, giving them the next free
+-- slot letters there (so 12A can become 07C), and cancels p_from with a note
+-- pointing at p_into. Waiver signatures move with the competitor.
+create or replace function public.merge_teams(p_from uuid, p_into uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  f        public.teams;
+  i        public.teams;
+  cap      integer;
+  n_from   integer;
+  n_into   integer;
+  member   public.team_members;
+  letter   char(1);
+  letters  constant char(1)[] := array['A', 'B', 'C', 'D'];
+begin
+  if not public.is_staff() then
+    raise exception 'Only staff can combine teams.' using errcode = '42501';
+  end if;
+  if p_from is null or p_into is null or p_from = p_into then
+    raise exception 'Choose two different teams to combine.' using errcode = 'P0001';
+  end if;
+
+  -- Lock both rows, always in the same order, so two merges cannot interleave.
+  perform 1 from public.teams where id in (p_from, p_into) order by id for update;
+  select * into f from public.teams where id = p_from;
+  select * into i from public.teams where id = p_into;
+  if f.id is null or i.id is null then
+    raise exception 'One of those teams no longer exists.' using errcode = 'P0001';
+  end if;
+  if f.status = 'cancelled' or i.status = 'cancelled' then
+    raise exception 'A cancelled team cannot be combined.' using errcode = 'P0001';
+  end if;
+  if f.division is distinct from i.division then
+    raise exception 'Both teams must be in the same division (in person or online).'
+      using errcode = 'P0001';
+  end if;
+
+  select least(coalesce(max_team_size, 4), 4) into cap from public.site_settings where id = 1;
+  cap := coalesce(cap, 4);
+  select count(*) into n_from from public.team_members where team_id = p_from;
+  select count(*) into n_into from public.team_members where team_id = p_into;
+  if n_from = 0 then
+    raise exception 'Team % has no competitors to move.', f.team_code using errcode = 'P0001';
+  end if;
+  if n_from + n_into > cap then
+    raise exception 'Together they would have % competitors; a team can have at most %.',
+      n_from + n_into, cap using errcode = 'P0001';
+  end if;
+
+  for member in
+    select * from public.team_members where team_id = p_from order by slot
+  loop
+    select l into letter
+    from unnest(letters[1:cap]) as l
+    where l not in (select slot from public.team_members where team_id = p_into)
+    order by l
+    limit 1;
+
+    update public.team_members
+    set team_id = p_into,
+        slot = letter,
+        original_team_id = coalesce(original_team_id, p_from)
+    where id = member.id;
+  end loop;
+
+  update public.teams
+  set status = 'cancelled',
+      merged_into = p_into,
+      staff_notes = concat_ws(
+        E'\n',
+        nullif(staff_notes, ''),
+        format('Combined into team %s on %s.', i.team_code,
+               to_char(now() at time zone 'America/Los_Angeles', 'YYYY-MM-DD'))
+      )
+  where id = p_from;
+
+  update public.teams set open_to_merge = false where id = p_into and n_from + n_into >= cap;
+
+  return public.merge_summary(f.team_code);
+end;
+$$;
+
+-- Who to tell about a combination, and what to tell them. Runs with the
+-- caller's rights (security invoker), so row level security does the gating:
+-- staff see every team, the service role (the email function) sees all, and
+-- anyone else sees nothing and gets null.
+create or replace function public.merge_summary(p_from_code text)
+returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  f public.teams;
+  i public.teams;
+begin
+  select * into f from public.teams where team_code = lpad(btrim(p_from_code), 2, '0');
+  if f.id is null or f.merged_into is null then
+    return null;
+  end if;
+  select * into i from public.teams where id = f.merged_into;
+
+  return jsonb_build_object(
+    'from', jsonb_build_object(
+      'team_code', f.team_code, 'team_name', f.team_name, 'contact_name', f.contact_name,
+      'contact_email', f.contact_email, 'coach_email', f.coach_email),
+    'into', jsonb_build_object(
+      'team_code', i.team_code, 'team_name', i.team_name, 'contact_name', i.contact_name,
+      'contact_email', i.contact_email, 'coach_email', i.coach_email, 'division', i.division),
+    'moved', coalesce((
+      select jsonb_agg(jsonb_build_object('competitor_id', m.competitor_id, 'full_name', m.full_name)
+                       order by m.slot)
+      from public.team_members m
+      where m.team_id = i.id and m.original_team_id = f.id
+    ), '[]'::jsonb),
+    'roster', coalesce((
+      select jsonb_agg(jsonb_build_object('competitor_id', m.competitor_id, 'full_name', m.full_name)
+                       order by m.slot)
+      from public.team_members m
+      where m.team_id = i.id
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+revoke all on function public.merge_teams(uuid, uuid) from public, anon;
+revoke all on function public.merge_summary(text) from public, anon;
+grant execute on function public.merge_teams(uuid, uuid) to authenticated;
+grant execute on function public.merge_summary(text) to authenticated, service_role;
 
 -- Staff dashboard convenience view: one row per team with a member summary.
 create or replace view public.team_roster
@@ -615,7 +1032,12 @@ select
           'email', m.email,
           'grade', m.grade,
           'guardian_name', m.guardian_name,
-          'guardian_email', m.guardian_email
+          'guardian_email', m.guardian_email,
+          'waiver_token', m.waiver_token,
+          'waiver_signed_name', m.waiver_signed_name,
+          'waiver_signed_at', m.waiver_signed_at,
+          'waiver_signer_role', m.waiver_signer_role,
+          'original_team_code', (select o.team_code from public.teams o where o.id = m.original_team_id)
         ) order by m.slot
       )
       from public.team_members m
@@ -633,5 +1055,7 @@ select
   t.donation_pledge,
   t.donation_method,
   t.donation_received,
-  t.confirmation_sent_at
+  t.confirmation_sent_at,
+  t.open_to_merge,
+  (select i.team_code from public.teams i where i.id = t.merged_into) as merged_into_code
 from public.teams t;

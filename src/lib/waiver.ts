@@ -29,9 +29,42 @@ export type WaiverCompetitor = {
   signed_name: string | null;
   signed_at: string | null;
   signer_role: SignerRole | null;
+  /** 'email' when staff recorded an agreement the parent emailed us. */
+  method?: 'online' | 'email' | null;
   /** The competitor this particular link was sent for. */
   is_link_owner: boolean;
 };
+
+/**
+ * The link in a staff test email. It belongs to no one, so the signing page
+ * shows a preview instead: nothing is saved, and its PDF is marked SAMPLE.
+ * Kept in step with SAMPLE_TOKEN in the send-confirmation function.
+ */
+export const SAMPLE_WAIVER_TOKEN = '00000000-0000-4000-8000-000000000000';
+
+/** The made-up team the test email names (sampleClaim in send-confirmation). */
+export function sampleWaiverStatus(): WaiverStatus {
+  const competitor = (competitor_id: string, full_name: string, grade: string, owner: boolean): WaiverCompetitor => ({
+    competitor_id, full_name, grade, signed: false, signed_name: null, signed_at: null, signer_role: null,
+    method: null, is_link_owner: owner,
+  });
+  return {
+    team_code: '00',
+    team_name: 'Test Team (not a real registration)',
+    division: 'in_person',
+    guardian_name: 'SFMO staff',
+    competitors: [competitor('00A', 'Ada Lovelace', '11', true), competitor('00B', 'Alan Turing', '10', false)],
+  };
+}
+
+/** What a parent who cannot use the page can email us instead. */
+export function emailFallbackStatement(competitorNames: string[]) {
+  const names =
+    competitorNames.length > 1
+      ? `${competitorNames.slice(0, -1).join(', ')} and ${competitorNames[competitorNames.length - 1]}`
+      : (competitorNames[0] ?? 'the competitor');
+  return `I, [your full legal name], am the parent or legal guardian of ${names}. I have read the SFMO 2027 liability waiver at ${new URL('waiver', window.location.origin + import.meta.env.BASE_URL).toString()} and I agree to it on their behalf.`;
+}
 
 /** What a signing link can see: the team, and the competitors it covers. */
 export type WaiverStatus = {
@@ -126,7 +159,12 @@ async function functionError(error: unknown, data: unknown, fallback: string) {
  * Downloads one signed waiver as a PDF. Called directly rather than through
  * functions.invoke, which tries to read every reply as text or JSON.
  */
-export async function downloadWaiverPdf(token: string, competitorId?: string): Promise<void> {
+export async function downloadWaiverPdf(
+  token: string,
+  competitorId?: string,
+  /** Only for the test link: the name and role typed into the preview. */
+  sample?: { name: string; role: SignerRole },
+): Promise<void> {
   const client = requireSupabase();
   if (!url || !anonKey) throw new Error('The registration database is not connected yet.');
   // The same headers functions.invoke would send.
@@ -138,7 +176,11 @@ export async function downloadWaiverPdf(token: string, competitorId?: string): P
       apikey: anonKey,
       Authorization: `Bearer ${data.session?.access_token ?? anonKey}`,
     },
-    body: JSON.stringify({ waiver_pdf: token, competitor_id: competitorId }),
+    body: JSON.stringify({
+      waiver_pdf: token,
+      competitor_id: competitorId,
+      ...(sample ? { sample_name: sample.name, sample_role: sample.role, doc_id: waiverDoc.id } : {}),
+    }),
   });
   if (!response.ok || !response.headers.get('Content-Type')?.includes('application/pdf')) {
     let detail = 'We could not make the PDF. Please try again in a minute.';
@@ -160,6 +202,29 @@ export async function downloadWaiverPdf(token: string, competitorId?: string): P
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 60_000);
+}
+
+/**
+ * Staff only: a parent or guardian emailed their agreement instead of using
+ * the link. Records it for that competitor, then emails them the signed PDF
+ * exactly as an online signature would. Returns what to tell the staff member.
+ */
+export async function recordEmailedWaiver(
+  token: string,
+  input: { name: string; role: SignerRole; receivedAt: string },
+): Promise<{ emailed: boolean }> {
+  const client = requireSupabase();
+  const { doc, sha256 } = await loadWaiverDocument();
+  const { error } = await client.rpc('record_emailed_waiver', {
+    p_token: token,
+    p_signed_name: input.name,
+    p_signer_role: input.role,
+    p_received_at: input.receivedAt,
+    p_doc_id: doc.id,
+    p_doc_sha256: sha256,
+  });
+  if (error) throw new Error(readErrorMessage(error, 'Could not record that waiver.'));
+  return { emailed: await emailSignedWaiver(token) };
 }
 
 /** Staff only: email a parent or guardian their signing link again. */

@@ -7,10 +7,13 @@ import { asset } from '../lib/asset';
 import { links } from '../lib/config';
 import { isSupabaseConfigured } from '../lib/supabase';
 import {
+  SAMPLE_WAIVER_TOKEN,
   downloadWaiverPdf,
+  emailFallbackStatement,
   emailSignedWaiver,
   getWaiver,
   loadWaiverDocument,
+  sampleWaiverStatus,
   signWaiver,
   type LoadedWaiverDocument,
   type SignerRole,
@@ -20,7 +23,9 @@ import {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type EmailState = 'sending' | 'sent' | 'failed';
+type EmailState = 'sending' | 'sent' | 'failed' | 'preview';
+
+type SignInput = { name: string; role: SignerRole; agree: boolean };
 
 const pacific = (iso: string) =>
   new Date(iso).toLocaleString('en-US', {
@@ -108,8 +113,9 @@ function CompetitorList({
             {competitor.grade ? <small>Grade {competitor.grade}</small> : null}
             {competitor.signed && competitor.signed_at && (
               <small className="waiver-who__signed">
-                Signed by {competitor.signed_name} ({competitor.signer_role === 'self' ? 'competitor' : 'parent or guardian'}),{' '}
-                {pacific(competitor.signed_at)}
+                Signed by {competitor.signed_name} (
+                {competitor.signer_role === 'self' ? 'competitor' : 'parent or guardian'}
+                {competitor.method === 'email' ? ', by email' : ''}), {pacific(competitor.signed_at)}
               </small>
             )}
           </span>
@@ -136,15 +142,43 @@ function CompetitorList({
   );
 }
 
+/**
+ * For anyone the page does not work for: the exact words to email us, and a
+ * button that writes that email. The signing email offers the same.
+ */
+function EmailFallback({ names, ids }: { names: string[]; ids: string[] }) {
+  const statement = emailFallbackStatement(names);
+  const mailto = `mailto:${links.email}?subject=${encodeURIComponent(
+    `SFMO 2027 waiver${ids.length ? ` — ${ids.join(', ')}` : ''}`,
+  )}&body=${encodeURIComponent(`${statement}\n\n`)}`;
+  return (
+    <div className="notice notice--info waiver-fallback">
+      <div>
+        <p className="notice__title">Trouble signing here?</p>
+        <p className="notice__body">
+          Email <a href={`mailto:${links.email}`}>{links.email}</a> from the address our email went
+          to, with your name filled in:
+        </p>
+        <blockquote className="waiver-fallback__quote">{statement}</blockquote>
+        <p className="notice__body">
+          A competitor who is 18 or older can write the same for themself. We record it and email
+          you the signed copy.
+        </p>
+        <a className="btn btn--sm waiver-fallback__btn" href={mailto}>
+          Write this email for me
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function SignForm({
-  token,
   status,
-  loaded,
+  sign,
   onSigned,
 }: {
-  token: string;
   status: WaiverStatus;
-  loaded: LoadedWaiverDocument;
+  sign: (input: SignInput) => Promise<WaiverStatus>;
   onSigned: (next: WaiverStatus) => void;
 }) {
   const unsigned = status.competitors.filter((competitor) => !competitor.signed);
@@ -172,14 +206,7 @@ function SignForm({
     setBusy(true);
     setError(null);
     try {
-      const next = await signWaiver(token, {
-        name,
-        role,
-        agree: agree && consent,
-        docId: loaded.doc.id,
-        sha256: loaded.sha256,
-      });
-      onSigned(next);
+      onSigned(await sign({ name, role, agree: agree && consent }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'We could not record your signature.');
     } finally {
@@ -324,6 +351,8 @@ export function WaiverPage() {
   const [params] = useSearchParams();
   const token = (params.get('t') ?? '').trim();
   const hasToken = UUID.test(token);
+  // The link in a staff test email: walk through everything, save nothing.
+  const preview = token === SAMPLE_WAIVER_TOKEN;
   useSignatureFont();
 
   const [loaded, setLoaded] = useState<LoadedWaiverDocument | null>(null);
@@ -341,6 +370,10 @@ export function WaiverPage() {
 
   useEffect(() => {
     if (!hasToken) return;
+    if (preview) {
+      setStatus(sampleWaiverStatus());
+      return;
+    }
     if (!isSupabaseConfigured) {
       setStatusError('Signing is not connected on this copy of the site. Please email us.');
       return;
@@ -353,13 +386,37 @@ export function WaiverPage() {
     return () => {
       active = false;
     };
-  }, [hasToken, token]);
+  }, [hasToken, preview, token]);
+
+  async function sign(input: SignInput): Promise<WaiverStatus> {
+    if (!loaded) throw new Error('The waiver is still loading. Please try again.');
+    if (!preview || !status) {
+      return signWaiver(token, { ...input, docId: loaded.doc.id, sha256: loaded.sha256 });
+    }
+    // Preview: the same checks the database makes, then a local "signature".
+    const name = input.name.trim().replace(/\s+/g, ' ');
+    if (!input.agree) throw new Error('Please tick the box to confirm you have read and agree to the waiver.');
+    if (name.length < 2 || name.length > 120) throw new Error('Type your full legal name to sign.');
+    const now = new Date().toISOString();
+    return {
+      ...status,
+      competitors: status.competitors.map((competitor) =>
+        competitor.signed || (input.role === 'self' && !competitor.is_link_owner)
+          ? competitor
+          : { ...competitor, signed: true, signed_name: name, signed_at: now, signer_role: input.role, method: 'online' },
+      ),
+    };
+  }
 
   function onSigned(next: WaiverStatus) {
     setStatus(next);
     setJustSigned(true);
-    setEmail('sending');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (preview) {
+      setEmail('preview');
+      return;
+    }
+    setEmail('sending');
     emailSignedWaiver(token).then((sent) => setEmail(sent ? 'sent' : 'failed'));
   }
 
@@ -367,7 +424,11 @@ export function WaiverPage() {
     setDownloading(competitor.competitor_id);
     setDownloadError(null);
     try {
-      await downloadWaiverPdf(token, competitor.competitor_id);
+      await downloadWaiverPdf(
+        token,
+        competitor.competitor_id,
+        preview ? { name: competitor.signed_name ?? '', role: competitor.signer_role ?? 'guardian' } : undefined,
+      );
     } catch (caught) {
       setDownloadError(caught instanceof Error ? caught.message : 'Could not download the PDF.');
     } finally {
@@ -403,16 +464,32 @@ export function WaiverPage() {
         <div className="wrap wrap--narrow waiver-page">
           {hasToken && !status && !statusError && <p className="loading label">Opening your waiver…</p>}
 
-          {statusError && (
-            <div className="notice notice--warn">
+          {preview && (
+            <div className="notice notice--info waiver-preview">
               <div>
-                <p className="notice__title">We could not open this link</p>
+                <p className="notice__title">Preview from a test email</p>
                 <p className="notice__body">
-                  {statusError} Questions? Email{' '}
-                  <a href={`mailto:${links.email}`}>{links.email}</a>.
+                  This is the sample link from a staff test email, for a made-up team. Try the whole
+                  thing: nothing here is saved, no email is sent, and the PDF you can download is
+                  marked SAMPLE. A parent&apos;s real link opens their own team here.
                 </p>
               </div>
             </div>
+          )}
+
+          {statusError && (
+            <>
+              <div className="notice notice--warn">
+                <div>
+                  <p className="notice__title">We could not open this link</p>
+                  <p className="notice__body">
+                    {statusError} Questions? Email{' '}
+                    <a href={`mailto:${links.email}`}>{links.email}</a>.
+                  </p>
+                </div>
+              </div>
+              <EmailFallback names={['[competitor’s name and ID]']} ids={[]} />
+            </>
           )}
 
           {status && (
@@ -427,6 +504,8 @@ export function WaiverPage() {
                         'We have emailed you a signed copy (PDF). You can also download it below.'}
                       {email === 'failed' &&
                         'Your signature is saved. We could not email the PDF just now, so please download it below.'}
+                      {email === 'preview' &&
+                        'Preview only: nothing was saved and no email was sent. A real signature is emailed as a PDF at this point; download the sample below to see it.'}
                     </p>
                   </div>
                 </div>
@@ -449,10 +528,16 @@ export function WaiverPage() {
                   {downloadError}
                 </p>
               )}
-              {allSigned && (
+              {allSigned && !preview && (
                 <p className="field__hint">
                   Nothing more to do. Keep the PDF for your records; we keep a copy too. If anything
                   here is wrong, email <a href={`mailto:${links.email}`}>{links.email}</a>.
+                </p>
+              )}
+              {allSigned && preview && (
+                <p className="field__hint">
+                  That is the whole flow a parent sees. Download a sample PDF above to see what they
+                  are emailed.
                 </p>
               )}
             </div>
@@ -481,10 +566,16 @@ export function WaiverPage() {
             // Keyed by who is left, so each new signer starts from a blank form.
             <SignForm
               key={unsigned.map((competitor) => competitor.competitor_id).join()}
-              token={token}
               status={status}
-              loaded={loaded}
+              sign={sign}
               onSigned={onSigned}
+            />
+          )}
+
+          {status && unsigned.length > 0 && (
+            <EmailFallback
+              names={unsigned.map((competitor) => `${competitor.full_name} (${competitor.competitor_id})`)}
+              ids={unsigned.map((competitor) => competitor.competitor_id)}
             />
           )}
 

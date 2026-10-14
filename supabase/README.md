@@ -285,6 +285,20 @@ signs it for them.
    signature, and an audit trail, and checks the fingerprint against the
    published text (it says so in red if they ever differ).
 
+**If the link does not work for someone**, the signing email and page both
+tell them to email sfmathopen@gmail.com instead, saying: "I, [full legal
+name], am the parent or legal guardian of [competitor (ID)]. I have read the
+SFMO 2027 liability waiver at https://sfmathopen.org/waiver and I agree to it
+on their behalf." When one arrives, expand the team in the staff portal, press
+**Got it by email** next to that competitor, check the name, role and date,
+and press **Record waiver**. It is stored as signed by email (with your staff
+email as the recorder), and they are emailed the signed PDF, which says it
+was agreed by email. Keep their email: it is the evidence.
+
+**Testing it.** The staff **Send me a test email** includes a sample signing
+email. Its link opens a preview for a made-up team: you can try the whole
+signing flow and download a PDF marked SAMPLE, and nothing is saved.
+
 **In the staff portal**, the **Waivers** column shows signed/total per team,
 and **Needs attention → Waivers still to sign** lists teams with gaps. Expand
 a team to see who signed each waiver and when, download any PDF, copy a

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { PixelIcon } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
@@ -7,9 +7,11 @@ import { sendConfirmation, sendTestEmail, type DonationMethod } from '../lib/reg
 import { isSupabaseConfigured, readErrorMessage, supabase } from '../lib/supabase';
 import {
   downloadWaiverPdf,
+  recordEmailedWaiver,
   resendWaiverLink,
   sendMergeNotice,
   waiverSigningLink,
+  type SignerRole,
 } from '../lib/waiver';
 
 type RosterMember = {
@@ -25,6 +27,9 @@ type RosterMember = {
   waiver_signed_name?: string | null;
   waiver_signed_at?: string | null;
   waiver_signer_role?: 'guardian' | 'self' | null;
+  /** 'email' when a staff member recorded an emailed agreement. */
+  waiver_method?: 'online' | 'email' | null;
+  waiver_recorded_by?: string | null;
   /** The team this competitor registered with, if staff moved them since. */
   original_team_code?: string | null;
 };
@@ -77,7 +82,126 @@ function waiverCounts(row: RosterRow) {
 function signedLabel(member: RosterMember) {
   if (!member.waiver_signed_at) return '';
   const who = member.waiver_signer_role === 'self' ? 'the competitor (18+)' : 'parent or guardian';
-  return `Signed by ${member.waiver_signed_name ?? '—'} (${who}), ${new Date(member.waiver_signed_at).toLocaleString()}`;
+  const how =
+    member.waiver_method === 'email'
+      ? `, by email — recorded by ${member.waiver_recorded_by ?? 'staff'}`
+      : '';
+  return `Signed by ${member.waiver_signed_name ?? '—'} (${who}${how}), ${new Date(member.waiver_signed_at).toLocaleString()}`;
+}
+
+/** Today in the browser's time zone, as the YYYY-MM-DD a date input uses. */
+const todayInput = () => new Date().toLocaleDateString('en-CA');
+
+/**
+ * A parent who could not use the link emailed their agreement instead.
+ * Record it here; they are then emailed the signed PDF like anyone else.
+ */
+function EmailedWaiverForm({
+  member,
+  onCancel,
+  onDone,
+}: {
+  member: RosterMember;
+  onCancel: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [name, setName] = useState(member.guardian_name ?? '');
+  const [role, setRole] = useState<SignerRole>('guardian');
+  const [date, setDate] = useState(todayInput());
+  const [kept, setKept] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const id = `emailed-${member.competitor_id}`;
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!member.waiver_token) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // Today: the moment of recording. An earlier day: noon that day, here.
+      const receivedAt = date === todayInput() ? new Date().toISOString() : new Date(`${date}T12:00:00`).toISOString();
+      const { emailed } = await recordEmailedWaiver(member.waiver_token, { name, role, receivedAt });
+      onDone(
+        `Recorded ${member.competitor_id}'s waiver from their email.${
+          emailed
+            ? ` Emailed ${member.guardian_email ?? 'them'} the signed PDF.`
+            : ' The PDF email did not go out; download it with PDF and send it yourself.'
+        }`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not record that waiver.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="staff__emailed" onSubmit={onSubmit}>
+      <p className="staff__emailed-title">
+        Record a waiver agreed by email for {member.competitor_id} {member.full_name}
+      </p>
+      <div className="staff__emailed-grid">
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-name`}>
+            Name they signed with
+          </label>
+          <input
+            id={`${id}-name`}
+            className="input"
+            required
+            minLength={2}
+            maxLength={120}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-role`}>
+            They are
+          </label>
+          <select
+            id={`${id}-role`}
+            className="select"
+            value={role}
+            onChange={(event) => setRole(event.target.value as SignerRole)}
+          >
+            <option value="guardian">Parent or guardian</option>
+            <option value="self">The competitor (18+)</option>
+          </select>
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor={`${id}-date`}>
+            Email received
+          </label>
+          <input
+            id={`${id}-date`}
+            className="input"
+            type="date"
+            required
+            max={todayInput()}
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
+        </div>
+      </div>
+      <label className="checkbox">
+        <input type="checkbox" checked={kept} onChange={(event) => setKept(event.target.checked)} required />
+        <span>
+          Their email says they have read the SFMO 2027 waiver and agree to it for{' '}
+          {member.full_name}, and it is kept in sfmathopen@gmail.com.
+        </span>
+      </label>
+      {error && <p className="field__hint field__hint--warn">{error}</p>}
+      <div className="btn-row">
+        <button type="submit" className="btn btn--kelp btn--sm" disabled={busy}>
+          {busy ? 'Recording…' : 'Record waiver'}
+        </button>
+        <button type="button" className="btn btn--sm" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
 }
 
 const METHOD_LABEL: Record<DonationMethod, string> = {
@@ -150,6 +274,8 @@ function toCsv(rows: RosterRow[]): string {
     'waiver_signed_by',
     'waiver_signer_role',
     'waiver_signed_at',
+    'waiver_method',
+    'waiver_recorded_by',
     'media_release_signed_by',
     'media_release_signed_at',
     'captain_waiver_ack_by',
@@ -194,6 +320,8 @@ function toCsv(rows: RosterRow[]): string {
         member?.waiver_signed_name ?? '',
         member?.waiver_signer_role ?? '',
         member?.waiver_signed_at ?? '',
+        member?.waiver_method ?? '',
+        member?.waiver_recorded_by ?? '',
         row.media_release_signed_by,
         row.media_release_signed_at,
         row.liability_waiver ? row.liability_waiver_signed_by : '',
@@ -393,6 +521,8 @@ function Dashboard({ session }: { session: Session }) {
   /** Key of the waiver action in flight, e.g. "pdf:07A". */
   const [waiverBusy, setWaiverBusy] = useState<string | null>(null);
   const [mergeTarget, setMergeTarget] = useState('');
+  /** Competitor ID whose "Got it by email" form is open. */
+  const [emailedFor, setEmailedFor] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -527,14 +657,16 @@ function Dashboard({ session }: { session: Session }) {
       void load();
       return;
     }
-    setCopied(`Confirmation sent to Team ${row.team_code}`);
-    window.setTimeout(() => setCopied(null), 2500);
+    flash(`Confirmation sent to Team ${row.team_code}`);
     void load();
   }
 
-  function flash(message: string) {
+  /** One status line at a time; a new message restarts the clock. */
+  const flashTimer = useRef<number | undefined>(undefined);
+  function flash(message: string | null, ms = Math.max(3000, (message?.length ?? 0) * 60)) {
+    window.clearTimeout(flashTimer.current);
     setCopied(message);
-    window.setTimeout(() => setCopied(null), 3500);
+    if (message) flashTimer.current = window.setTimeout(() => setCopied(null), ms);
   }
 
   async function waiverPdf(member: RosterMember) {
@@ -620,18 +752,16 @@ function Dashboard({ session }: { session: Session }) {
   async function copy(label: string, values: string[]) {
     const text = values.join(', ');
     if (!text) {
-      setCopied(`No ${label.toLowerCase()} to copy`);
+      flash(`No ${label.toLowerCase()} to copy`);
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(`Copied ${values.length} ${label.toLowerCase()}`);
+      flash(`Copied ${values.length} ${label.toLowerCase()}`);
     } catch {
       window.prompt(`Copy ${label} (${values.length}):`, text);
-      setCopied(null);
-      return;
+      flash(null);
     }
-    window.setTimeout(() => setCopied(null), 2500);
   }
 
   const competitorEmails = useMemo(
@@ -722,7 +852,7 @@ function Dashboard({ session }: { session: Session }) {
       .join('');
     const win = window.open('', '_blank');
     if (!win) {
-      setCopied('Pop-up blocked — allow pop-ups to print');
+      flash('Pop-up blocked — allow pop-ups to print');
       return;
     }
     win.document.write(
@@ -1012,6 +1142,7 @@ function Dashboard({ session }: { session: Session }) {
                     onClick={() => {
                       setExpanded(expanded === row.id ? null : row.id);
                       setMergeTarget('');
+                      setEmailedFor(null);
                     }}
                     className="staff__row"
                   >
@@ -1143,7 +1274,31 @@ function Dashboard({ session }: { session: Session }) {
                                           {waiverBusy === `mail:${member.competitor_id}` ? 'Sending…' : 'Email link'}
                                         </button>
                                       )}
+                                      {!member.waiver_signed_at && isLive(row) && (
+                                        <button
+                                          type="button"
+                                          className="btn btn--sm"
+                                          aria-expanded={emailedFor === member.competitor_id}
+                                          onClick={() =>
+                                            setEmailedFor(emailedFor === member.competitor_id ? null : member.competitor_id)
+                                          }
+                                          title="They emailed us their agreement instead of signing online"
+                                        >
+                                          Got it by email
+                                        </button>
+                                      )}
                                     </span>
+                                  )}
+                                  {emailedFor === member.competitor_id && member.waiver_token && (
+                                    <EmailedWaiverForm
+                                      member={member}
+                                      onCancel={() => setEmailedFor(null)}
+                                      onDone={(message) => {
+                                        setEmailedFor(null);
+                                        flash(message);
+                                        void load();
+                                      }}
+                                    />
                                   )}
                                 </li>
                               ))}

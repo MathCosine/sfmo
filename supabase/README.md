@@ -127,8 +127,8 @@ Supabase's docs currently allow a year to do this. The Project URL and anon
 key do not change, so the GitHub secrets stay as they are. Then run the
 latest `schema.sql` once more (step 2) — it is safe to re-run, and it adds
 anything newer than what the project has, such as the division and media
-release columns, the liability waiver and donation fields, and the
-confirmation-email function.
+release columns, the donation fields, online waiver signing and combining
+teams.
 
 **Replace it with a new project.** Follow steps 1–4 again on the new project,
 then in GitHub replace the two secrets, `VITE_SUPABASE_URL` and
@@ -148,8 +148,9 @@ email:
 
 * the team's **contact** (coach cc'd): team ID, every competitor ID, division,
   and how to give the suggested donation;
-* each **parent or guardian** who signed the liability waiver: a short notice
-  naming the competitors they signed for, with "reply if this wasn't you".
+* each **parent or guardian** named for a competitor: their private link to
+  read and sign the liability waiver online (one email, and one link, for
+  siblings who share a parent's email) — see step 8.
 
 It sends **once per team**, and only when given a matching team ID *and*
 contact email, so the endpoint cannot be used to email strangers. If sending
@@ -183,7 +184,7 @@ On the free plan (no card):
    | ------------------- | ------------------------------------------ |
    | `AGENTMAIL_API_KEY` | the key from step 3                        |
    | `AGENTMAIL_INBOX`   | the inbox address, e.g. `sfmo2027@agentmail.to` |
-   | `SITE_URL`          | optional; defaults to `https://mathcosine.github.io/sfmo/`. Update it when you move to sfmathopen.org |
+   | `SITE_URL`          | optional; defaults to `https://sfmathopen.org/`. Only set it if the site moves |
 
    `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided to every
    function automatically. Never copy the service-role key anywhere else.
@@ -196,6 +197,13 @@ On the free plan (no card):
 
    With the Supabase CLI instead:
    `supabase functions deploy send-confirmation --no-verify-jwt`.
+
+   The function makes the signed-waiver PDFs with `pdf-lib`, imported as
+   `npm:pdf-lib`. If the dashboard editor refuses to deploy it (an error
+   about an `npm:` import or a module it cannot find), deploy with the CLI
+   line above instead — from the repo root, after `npx supabase login` and
+   `npx supabase link --project-ref <your project ref>`. The text and fonts
+   for the PDF come from the website (`/legal/`), so deploy the site first.
 6. **Test.** Sign in at `/staff` and press **Send me a test email**. It
    sends sample copies of both emails (marked `[TEST]`) to you only, works
    while registration is closed, and touches no data. **Check your spam
@@ -255,6 +263,64 @@ together.
 
 ---
 
+## 8. Liability waivers, signed online
+
+Parents and guardians sign the waiver themselves; the team captain no longer
+signs it for them.
+
+1. At registration the team names, for each competitor, the parent or
+   guardian who will sign (an 18+ competitor names themself). The captain
+   acknowledges that each must sign before competition day.
+2. The confirmation email gives each of them a private link,
+   `https://sfmathopen.org/waiver?t=<token>`. The token is a random UUID per
+   competitor; the link is the key, so treat it like a password. One link
+   covers every competitor on the team who named the same email.
+3. On that page they read the full waiver, choose **parent or legal
+   guardian** or **the competitor, 18 or older**, type their full legal name,
+   and tick two boxes (agree; sign electronically). `sign_waiver()` records
+   the name, role, time, IP address (from the request headers), browser, and
+   the document version and SHA-256 fingerprint of the exact text shown.
+4. They are emailed the signed PDF — one per competitor — and can download it
+   from the same page at any time. The PDF prints the full text, the
+   signature, and an audit trail, and checks the fingerprint against the
+   published text (it says so in red if they ever differ).
+
+**In the staff portal**, the **Waivers** column shows signed/total per team,
+and **Needs attention → Waivers still to sign** lists teams with gaps. Expand
+a team to see who signed each waiver and when, download any PDF, copy a
+signing link, or **Email link** to send it again. **Copy unsigned-waiver
+emails** gives you the addresses for a reminder, and the check-in sheet has
+a Waiver column that says MISSING where one is.
+
+**Changing the wording.** The text is `public/legal/sfmo-2027-waiver-v1.json`.
+Never edit a published version — signatures point at it by fingerprint. Copy
+it to `-v2.json`, edit that, and point `waiverDoc.id` in `src/lib/config.ts`
+at it (see `public/legal/README.md`). Have any version reviewed by someone
+qualified to advise on it before you rely on it. The plain-language summary
+on the registration page is in `src/data/waivers.ts`; keep it consistent.
+
+## 9. Combining small teams
+
+Teams of fewer than four can tick **open to being combined** (ticked by
+default; solo competitors see "Registering on your own? Happy to join
+others."). To combine:
+
+1. **Needs attention → Small teams open to combining** lists them.
+2. Expand the team to move, pick a team in the same division with room under
+   **Combine with another team**, and press **Combine**. The confirmation
+   lists every new ID first.
+3. `merge_teams()` moves the competitors to the free letters on the chosen
+   team (01A could become 05C), marks the old team **cancelled**, "combined
+   into 05", and adds a staff note. Signed waivers move with each competitor.
+4. Both teams' contacts (coaches cc'd) are emailed the new roster and IDs.
+   The old team ID still works in **Look up your team IDs**, and shows the
+   new IDs.
+
+Only staff can combine (`merge_teams()` checks `is_staff()`), and it refuses
+different divisions, cancelled teams, and anything over four.
+
+---
+
 ## How the pieces fit
 
 ```
@@ -290,14 +356,15 @@ teams. Raise it in `register_team()` if a coach legitimately needs more.
 so an online registration is refused unless the team confirms no member
 does (`distance_attested`).
 
-**Media release and liability waiver.** Both documents are shown in full on
-the form; their text lives in `src/data/waivers.ts`. Each competitor's parent
-or guardian (or the competitor, if 18+) signs the waiver by typing their own
-name and email — stored on `team_members` as `guardian_name` /
-`guardian_email`. The captain then signs once by typing their name, which
-`register_team()` checks against the roster (ignoring case and extra spaces),
-and ticks one box for each document. That signature and time are stored on
-the team for both. `register_team()` refuses a registration missing any of it.
+**Media release and liability waiver.** The captain signs the media release
+for the whole team by typing their name, which `register_team()` checks
+against the roster (ignoring case and extra spaces). Each competitor's parent
+or guardian is named at registration (`guardian_name` / `guardian_email` on
+`team_members`) and signs the liability waiver later through their own link
+(step 8); the signature lives on the same row (`waiver_signed_*`,
+`waiver_doc_*`). `register_team()` refuses a registration missing the media
+release, a parent or guardian for any competitor, or the captain's
+acknowledgment.
 
 **Suggested donation.** Optional, $10 per competitor suggested (so $40 for a
 full team; set in `src/lib/config.ts`). The team records a pledge for the
@@ -332,6 +399,13 @@ select donation_method, count(*) as teams, sum(donation_pledge) as pledged,
 from public.teams
 where status <> 'cancelled' and donation_pledge > 0
 group by donation_method;
+
+-- Competitors still waiting on a signed waiver
+select m.competitor_id, m.full_name, m.guardian_name, m.guardian_email
+from public.team_members m
+join public.teams t on t.id = m.team_id
+where m.waiver_signed_at is null and t.status <> 'cancelled'
+order by m.competitor_id;
 
 -- Teams whose confirmation email has not gone out
 select team_code, team_name, contact_email from public.teams

@@ -638,8 +638,13 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
   // Signature
   ensure(80);
   write('SIGNATURE', { font: bold, size: 7.5, color: SOFT, gap: 2 });
-  write(c.signed_name ?? '', { font: italic, size: 20, gap: 2, lead: 1.3 });
-  page.drawLine({ start: { x: M, y: y + 2 }, end: { x: M + 260, y: y + 2 }, thickness: 0.8, color: INK });
+  write(c.signed_name ?? '', { font: italic, size: 20, gap: 7, lead: 1.3 });
+  // Under the descenders (g, y, j), and as long as the signature.
+  const signatureWidth = Math.max(
+    260,
+    ...wrap(c.signed_name ?? '', italic, 20, W - 2 * M).map((line) => italic.widthOfTextAtSize(line, 20) + 8),
+  );
+  page.drawLine({ start: { x: M, y: y + 1 }, end: { x: M + Math.min(signatureWidth, W - 2 * M), y: y + 1 }, thickness: 0.8, color: INK });
   y -= 6;
   write(
     `Signed electronically by ${c.signed_name}, ${roleLabel(c.signer_role)}${c.signer_role === 'self' ? '' : ` of ${c.full_name}`}, on ${pacific(c.signed_at)}.`,

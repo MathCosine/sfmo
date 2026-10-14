@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+/** Exported for the one call the SDK cannot make well: downloading a PDF. */
+export const url = import.meta.env.VITE_SUPABASE_URL?.trim();
+export const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
 /**
  * The site is a static build, so it ships only the anon key — which is

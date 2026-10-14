@@ -39,6 +39,16 @@ export const donation = {
 } as const;
 
 /**
+ * The liability waiver parents and guardians sign, published as JSON in
+ * public/legal so the signing page and the signed PDF use the same words.
+ * Never edit a published version: copy it to a new id and point this at it
+ * (see public/legal/README.md). Signatures already made keep their version.
+ */
+export const waiverDoc = {
+  id: 'sfmo-2027-waiver-v1',
+} as const;
+
+/**
  * SFMO 2027 — the event the whole landing page is about.
  * `registrationOpensAt` gates the registration form; before it, the form
  * renders in a locked state with the date. It is compared in UTC.

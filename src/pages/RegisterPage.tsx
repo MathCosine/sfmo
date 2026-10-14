@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Countdown } from '../components/Countdown';
 import { ArrowIcon, DiscordIcon } from '../components/Icons';
 import { SeoHead } from '../components/SeoHead';
 import { asset } from '../lib/asset';
 import { PixelIcon, type PixelIconName } from '../components/PixelIcon';
-import { LIABILITY_WAIVER, MEDIA_RELEASE, MEDIA_RELEASE_GIST } from '../data/waivers';
+import { MEDIA_RELEASE, MEDIA_RELEASE_GIST, WAIVER_GIST, WAIVER_KEY_POINTS } from '../data/waivers';
 import {
   DIVISIONS,
   IN_PERSON_RADIUS_MILES,
@@ -44,8 +45,8 @@ const HOW_IT_WORKS: IconItem[] = [
   },
   {
     icon: 'envelope',
-    title: 'Check your inbox',
-    body: 'A confirmation for your team, and a short note for each parent or guardian.',
+    title: 'Parents sign online',
+    body: 'Each parent or guardian is emailed a link to sign the waiver, and gets a signed PDF back.',
   },
 ];
 
@@ -63,12 +64,12 @@ const WHAT_WE_ASK: IconItem[] = [
   {
     icon: 'idcard',
     title: 'Competitors',
-    body: `Up to ${sfmo2027.maxTeamSize} — name, grade and email for each.`,
+    body: `Up to ${sfmo2027.maxTeamSize} — name, grade and email for each. On your own? You can register solo and we can place you with others.`,
   },
   {
     icon: 'shield',
     title: 'Two waivers',
-    body: "A media release and a liability waiver: your captain signs, plus each competitor's parent or guardian.",
+    body: "Your captain signs the media release. Each competitor's parent or guardian signs the liability waiver online, from a link we email them.",
   },
   {
     icon: 'heart',
@@ -112,10 +113,55 @@ function normaliseName(name: string) {
   return name.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-/** Both documents, in full. Text lives in src/data/waivers.ts. */
+/**
+ * The two documents. The media release is shown in full; the liability
+ * waiver is summarised here and read and signed in full at /waiver.
+ */
 function WaiverDocs() {
   return (
     <div className="docs">
+      <article className="doc">
+        <header className="doc__head">
+          <PixelIcon name="shield" size={44} />
+          <div>
+            <h3 className="doc__title">Liability waiver</h3>
+            <p className="doc__who label">
+              Signed online by a parent or guardian for each competitor (18+: by the competitor)
+            </p>
+          </div>
+        </header>
+        <p className="doc__gist">
+          <strong>In short:</strong> {WAIVER_GIST}
+        </p>
+        <div className="release">
+          <p>
+            <strong>Key points.</strong> A summary only — the full waiver is what is signed.
+          </p>
+          <ol className="clauses">
+            {WAIVER_KEY_POINTS.map((clause, index) => (
+              <li className="clause" key={clause.title}>
+                <span className="clause__badge">
+                  <PixelIcon name={clause.icon} size={26} />
+                  <span className="clause__num label">{index + 1}</span>
+                </span>
+                <p>
+                  <strong>{clause.title}.</strong> {clause.text}
+                </p>
+              </li>
+            ))}
+          </ol>
+          <p className="doc__signing">
+            After you register, we email each parent or guardian a private link to read and sign
+            the full waiver. They get a signed PDF for their records.
+          </p>
+          <p>
+            <Link to="/waiver" className="doc__full" target="_blank">
+              Read the full waiver <ArrowIcon />
+            </Link>
+          </p>
+        </div>
+      </article>
+
       <article className="doc">
         <header className="doc__head">
           <PixelIcon name="camera" size={44} />
@@ -129,39 +175,6 @@ function WaiverDocs() {
         </p>
         <div className="release">
           <p>{MEDIA_RELEASE}</p>
-        </div>
-      </article>
-
-      <article className="doc">
-        <header className="doc__head">
-          <PixelIcon name="shield" size={44} />
-          <div>
-            <h3 className="doc__title">Liability waiver</h3>
-            <p className="doc__who label">
-              Signed by a parent or guardian for each competitor (18+: by the competitor)
-            </p>
-          </div>
-        </header>
-        <p className="doc__gist">
-          <strong>In short:</strong> {LIABILITY_WAIVER.gist} The full text below is what you agree
-          to.
-        </p>
-        <div className="release">
-          <p>{LIABILITY_WAIVER.intro}</p>
-          <ol className="clauses">
-            {LIABILITY_WAIVER.clauses.map((clause, index) => (
-              <li className="clause" key={clause.title}>
-                <span className="clause__badge">
-                  <PixelIcon name={clause.icon} size={26} />
-                  <span className="clause__num label">{index + 1}</span>
-                </span>
-                <p>
-                  <strong>{clause.title}.</strong> {clause.text}
-                </p>
-              </li>
-            ))}
-          </ol>
-          <p className="doc__signing">{LIABILITY_WAIVER.signing}</p>
         </div>
       </article>
     </div>
@@ -238,10 +251,23 @@ function DonationWays({
 function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState }) {
   const pledged = (receipt.donation_pledge ?? 0) > 0;
   const size = receipt.members.length;
+  const merged = receipt.merged_into ?? null;
+  const pending = receipt.members.filter((member) => member.waiver_signed === false).length;
   return (
     <div className="receipt">
       <p className="eyebrow">You are registered</p>
       <h2>Team {receipt.team_code} — {receipt.team_name}</h2>
+      {merged && (
+        <div className="notice notice--info receipt__merged">
+          <div>
+            <p className="notice__title">Combined into team {merged.team_code}</p>
+            <p className="notice__body">
+              To make a fuller team, we combined you with team {merged.team_code},{' '}
+              {merged.team_name}. Your competitors now compete under the new IDs below.
+            </p>
+          </div>
+        </div>
+      )}
       <p className="receipt__note">
         Save these IDs. Each competitor writes theirs on every answer sheet, and we use them for
         check-in on competition day. A copy has been recorded against{' '}
@@ -250,15 +276,42 @@ function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState 
 
       <ul className="id-list">
         {receipt.members.map((member) => (
-          <li className="id-list__row" key={member.slot}>
+          <li className="id-list__row" key={member.competitor_id}>
             <span className="id-list__id pixel">{member.competitor_id}</span>
             <span className="id-list__name">
               {member.full_name}
               {member.grade ? <small> · Grade {member.grade}</small> : null}
             </span>
+            {member.waiver_signed !== undefined && (
+              <span
+                className={`badge id-list__waiver ${member.waiver_signed ? 'badge--kelp' : 'badge--muted'}`}
+              >
+                {member.waiver_signed ? 'Waiver signed' : 'Waiver pending'}
+              </span>
+            )}
           </li>
         ))}
       </ul>
+
+      {pending > 0 && (
+        <p className="receipt__waivers">
+          <PixelIcon name="doc" size={22} />
+          <span>
+            <strong>
+              {pending === size ? 'Next: the waivers.' : `${pending} waiver${pending === 1 ? '' : 's'} still to sign.`}
+            </strong>{' '}
+            We have emailed each parent or guardian a private link to sign their competitor&apos;s
+            waiver online. Every competitor needs one signed before competition day. Look your team
+            up below to check who has signed.
+          </span>
+        </p>
+      )}
+      {!merged && receipt.open_to_merge && size < sfmo2027.maxTeamSize && (
+        <p className="field__hint">
+          You said you are open to being combined with another small team. If we do, we will email
+          you the new IDs.
+        </p>
+      )}
 
       <p className="receipt__status">
         {receipt.division && (
@@ -268,7 +321,10 @@ function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState 
             {' · '}
           </>
         )}
-        Status: <span className="badge badge--sub">{receipt.status}</span>
+        Status:{' '}
+        <span className="badge badge--sub">
+          {merged ? `combined into team ${merged.team_code}` : receipt.status}
+        </span>
       </p>
 
       {email && (
@@ -277,7 +333,7 @@ function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState 
           {email === 'sent' && (
             <>
               Confirmation emailed to <strong>{receipt.contact_email}</strong>, and a waiver
-              confirmation to each parent or guardian. Check spam if it hasn&apos;t arrived.
+              signing link to each parent or guardian. Check spam if it hasn&apos;t arrived.
             </>
           )}
           {email === 'failed' && (
@@ -483,6 +539,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
         // An in-person team has nothing to attest; never send a stale tick from
         // a moment when "online" was selected.
         distance_attested: form.division === 'online' && form.distance_attested,
+        open_to_merge: form.open_to_merge && form.members.length < settings.maxTeamSize,
         donation_pledge: giving ? pledge : null,
         donation_method: giving ? form.donation_method : null,
       });
@@ -685,6 +742,28 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
             + Add competitor {String.fromCharCode(65 + form.members.length)}
           </button>
         )}
+
+        {form.members.length < settings.maxTeamSize && (
+          <label className="checkbox reg-form__attest reg-form__merge">
+            <input
+              type="checkbox"
+              checked={form.open_to_merge}
+              onChange={(event) => setField('open_to_merge', event.target.checked)}
+            />
+            <span>
+              <strong>
+                {form.members.length === 1
+                  ? 'Registering on your own? Happy to join others.'
+                  : 'Open to being combined.'}
+              </strong>{' '}
+              {form.members.length === 1
+                ? 'Leave this ticked and we may place you with other solo competitors or a small team in your division, so you compete as a full team.'
+                : `We have fewer than ${settings.maxTeamSize} competitors. Leave this ticked and we may combine us with another small team in our division.`}{' '}
+              If we do, we email your contact person the new competitor IDs. Signed waivers carry
+              over.
+            </span>
+          </label>
+        )}
       </fieldset>
 
       <fieldset className="reg-form__group" disabled={busy}>
@@ -874,16 +953,18 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
       <fieldset className="reg-form__group" id="waivers" disabled={busy}>
         <legend className="reg-form__legend label">6 · Waivers</legend>
         <p className="field__hint reg-form__hint">
-          Two documents. A parent or guardian signs the liability waiver for each competitor, and
-          your team captain signs once at the bottom for the whole team.
+          Two documents. Each competitor&apos;s parent or guardian signs the liability waiver
+          online — we email them a link as soon as you register. Your team captain signs the media
+          release at the bottom, for the whole team.
         </p>
 
         <WaiverDocs />
 
-        <h4 className="doc__subtitle">Parent or guardian signatures</h4>
+        <h4 className="doc__subtitle">Who signs each competitor&apos;s waiver</h4>
         <p className="field__hint reg-form__hint">
-          For each competitor, their parent or guardian types their own full name. Competitors who
-          are 18 or older type their own name and email. We email each signer to confirm.
+          The parent or legal guardian who will sign for each competitor. We email them the waiver
+          to sign online, and a signed PDF afterwards. Competitors who are 18 or older enter their
+          own name and email. One parent for siblings? Use the same email and they sign once.
         </p>
         {form.members.map((member, index) => (
           <div className="guardian" key={index}>
@@ -894,7 +975,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
             <div className="field-grid">
               <div className="field">
                 <label className="field__label" htmlFor={`guardian-name-${index}`}>
-                  Guardian&apos;s full name <span className="req">*</span>
+                  Parent or guardian&apos;s full name <span className="req">*</span>
                 </label>
                 <input
                   id={`guardian-name-${index}`}
@@ -917,6 +998,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
                   value={member.guardian_email}
                   onChange={(event) => setMember(index, 'guardian_email', event.target.value)}
                 />
+                <p className="field__hint">The signing link goes here.</p>
               </div>
             </div>
           </div>
@@ -942,7 +1024,7 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
           >
             {form.media_release_signed_by && !signerOnRoster
               ? 'This must match one of the competitor names above exactly.'
-              : 'The captain must be one of the competitors listed above. This one signature covers both boxes below.'}
+              : 'The captain must be one of the competitors listed above.'}
           </p>
         </div>
         <div className="doc__confirms">
@@ -967,9 +1049,9 @@ function RegistrationForm({ settings }: { settings: RegistrationWindow }) {
               required
             />
             <span>
-              <strong>Liability waiver.</strong> I confirm that the parent or guardian named for
-              each competitor above (or the competitor, if 18 or older) has read the liability
-              waiver, agrees to it, and typed their own name as their signature.
+              <strong>Liability waiver.</strong> I understand that the parent or guardian named
+              for each competitor above (or the competitor, if 18 or older) must sign the liability
+              waiver online before competition day, and that they will be emailed a link to do so.
             </span>
           </label>
         </div>
@@ -1121,11 +1203,12 @@ export function RegisterPage() {
           <div className="wrap wrap--narrow">
             <details className="panel waiver-docs" id="waivers" open={wantsWaivers}>
               <summary className="waiver-docs__summary">
-                Read the media release and liability waiver
+                Read the liability waiver and media release
               </summary>
               <p className="field__hint reg-form__hint">
-                Signed as part of registration: a parent or guardian signs the liability waiver for
-                each competitor, and the team captain signs for the whole team.
+                After a team registers, each competitor&apos;s parent or guardian signs the liability
+                waiver online, from a link we email them. The team captain signs the media release
+                for the whole team.
               </p>
               <WaiverDocs />
             </details>

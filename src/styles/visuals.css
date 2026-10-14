@@ -746,3 +746,340 @@
 .nowrap {
   white-space: nowrap;
 }
+
+/* --------------------------------------------------------------------------
+   Waiver · the signing page (/waiver)
+   -------------------------------------------------------------------------- */
+
+.waiver-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.waiver-team__title {
+  margin: 0.2rem 0 0.9rem;
+  font-size: clamp(1.25rem, 3.4vw, 1.6rem);
+}
+
+.waiver-team__done {
+  margin-bottom: 1.2rem;
+}
+
+.waiver-who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0;
+  margin: 0 0 0.8rem;
+  list-style: none;
+}
+
+.waiver-who__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 0.8rem;
+  align-items: center;
+  padding: 0.65rem 0.8rem;
+  background: var(--paper-warm);
+  border: var(--border);
+}
+
+.waiver-who__row > .badge,
+.waiver-who__end {
+  grid-column: 2;
+  justify-self: start;
+}
+
+@media (min-width: 620px) {
+  .waiver-who__row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .waiver-who__row > .badge,
+  .waiver-who__end {
+    grid-column: 3;
+    justify-self: end;
+  }
+}
+
+.waiver-who__name {
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.waiver-who__name small {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.waiver-who__signed {
+  font-size: 0.8rem;
+}
+
+.waiver-who__end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* The document itself: set like paper, not like a web page. */
+.legal {
+  padding: clamp(1.2rem, 4vw, 2.4rem);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border-thick);
+  box-shadow: var(--shadow);
+}
+
+.waiver-docs .legal {
+  margin-top: 1rem;
+  box-shadow: none;
+}
+
+.legal__head {
+  padding-bottom: 0.9rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  border-bottom: 3px double var(--ink);
+}
+
+.legal__org {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--lagoon-deep);
+}
+
+.legal__title {
+  margin: 0.35rem 0;
+  font-family: var(--font-body);
+  font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.legal__event {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.legal__notice,
+.legal__ack {
+  padding: 0.75rem 0.9rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  background: color-mix(in srgb, var(--coral) 10%, var(--paper));
+  border: 2px solid var(--ink);
+}
+
+.legal__section {
+  margin-top: 1.1rem;
+}
+
+.legal__heading {
+  margin-bottom: 0.35rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.legal__section p + p {
+  margin-top: 0.55rem;
+}
+
+.legal__ack {
+  margin-top: 1.4rem;
+}
+
+.legal__meta {
+  margin-top: 1rem;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+/* The signing form */
+.sign-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  background: var(--paper);
+  border: var(--border-thick);
+  box-shadow: var(--shadow-lg);
+}
+
+.sign-box__title {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 0;
+  font-size: clamp(1.2rem, 3.4vw, 1.5rem);
+}
+
+.sign-box__group {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.sign-box__group legend {
+  margin-bottom: 0.5rem;
+}
+
+.sign-box .btn--lg {
+  align-self: flex-start;
+}
+
+.sig-preview {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem 0.8rem;
+  background: var(--paper-warm);
+  border: 2px dashed var(--ink-faint);
+}
+
+.sig-preview__label {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.sig-preview__name {
+  min-height: 2.6rem;
+  font-family: 'SFMO Signature', var(--font-body);
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--lagoon-deep);
+  overflow-wrap: anywhere;
+}
+
+.sig-preview__line {
+  height: 0;
+  border-top: 2px solid var(--ink);
+}
+
+.sig-preview__date {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* Register · waiver link, merge option, receipt waiver status */
+.doc__full {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-weight: 800;
+}
+
+.reg-form__merge {
+  margin-top: 1.1rem;
+  border-color: color-mix(in srgb, var(--lagoon) 60%, transparent);
+}
+
+.receipt__merged {
+  margin: 0.8rem 0 1rem;
+}
+
+.id-list__waiver {
+  margin-left: auto;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.receipt__waivers {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  margin: 0.4rem 0 0.9rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--sub) 16%, var(--paper));
+  border: var(--border);
+}
+
+.receipt__waivers .px-icon {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.id-list__row {
+  flex-wrap: wrap;
+}
+
+.id-list__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Staff · waivers and combining teams */
+.staff__tag {
+  margin-left: 0.4rem;
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+.staff__member .id-list__name {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+}
+
+.staff__waiver {
+  font-weight: 700;
+}
+
+.staff__waiver--ok {
+  color: var(--kelp-deep) !important;
+}
+
+.staff__waiver--todo {
+  color: var(--coral) !important;
+}
+
+.staff__member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.staff__merge {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0.9rem;
+  margin-top: 0.9rem;
+  background: color-mix(in srgb, var(--lagoon) 9%, var(--paper));
+  border: 2px dashed color-mix(in srgb, var(--lagoon-deep) 60%, transparent);
+}
+
+.staff__merge .dive__subhead {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0 0 0.2rem;
+}
+
+.staff__merge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.staff__merge-row .select {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.staff__notes {
+  white-space: pre-line;
+}

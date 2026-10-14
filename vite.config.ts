@@ -27,6 +27,8 @@ type RouteMeta = {
   title: string;
   description: string;
   priority: string;
+  /** A real page, but kept out of search: no sitemap entry, robots noindex. */
+  noindex?: boolean;
 };
 
 /**
@@ -78,6 +80,15 @@ const ROUTES: RouteMeta[] = [
       'The organizers, problem writers, and volunteers behind the San Francisco Math Initiative.',
     priority: '0.6',
   },
+  {
+    // Parents arrive here from a private signing link, so it must load as a
+    // real page, but it should never appear in search results.
+    path: 'waiver',
+    title: 'Liability waiver — SFMO 2027',
+    description: 'Read and sign the SFMO 2027 participant waiver.',
+    priority: '0.1',
+    noindex: true,
+  },
 ];
 
 /** Emits per-route HTML, robots.txt and sitemap.xml for the deployed origin. */
@@ -121,7 +132,8 @@ function staticSiteFiles(): Plugin {
             `$1${escapeAttr(route.description)}$2`,
           )
           .replace(/(<link rel="canonical" href=")[\s\S]*?(")/, `$1${canonical}$2`)
-          .replace(/(<meta property="og:url" content=")[\s\S]*?(")/, `$1${canonical}$2`);
+          .replace(/(<meta property="og:url" content=")[\s\S]*?(")/, `$1${canonical}$2`)
+          .replace('</head>', route.noindex ? '  <meta name="robots" content="noindex" />\n  </head>' : '</head>');
 
         const target =
           route.path === ''
@@ -143,7 +155,7 @@ function staticSiteFiles(): Plugin {
           .replace('</head>', '  <meta name="robots" content="noindex" />\n  </head>'),
       );
 
-      const urls = ROUTES.map(
+      const urls = ROUTES.filter((route) => !route.noindex).map(
         (route) =>
           `  <url>\n    <loc>${SITE_URL}${route.path}</loc>\n    <lastmod>${today}</lastmod>\n    <priority>${route.priority}</priority>\n  </url>`,
       ).join('\n');

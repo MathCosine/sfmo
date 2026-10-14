@@ -8,7 +8,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { TeamPage } from './pages/TeamPage';
 
 /**
- * Split out of the main bundle: the two database-backed routes (so the
+ * Split out of the main bundle: the database-backed routes (so the
  * Supabase SDK is not downloaded by someone who only came to read about the
  * contest) and About (which carries ~115 KB of pre-projected map geometry).
  */
@@ -20,6 +20,9 @@ const RegisterPage = lazy(() =>
 );
 const StaffPage = lazy(() =>
   import('./pages/StaffPage').then((module) => ({ default: module.StaffPage })),
+);
+const WaiverPage = lazy(() =>
+  import('./pages/WaiverPage').then((module) => ({ default: module.WaiverPage })),
 );
 
 function RouteFallback() {
@@ -63,6 +66,14 @@ export function App() {
             element={
               <Suspense fallback={<RouteFallback />}>
                 <StaffPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="waiver"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <WaiverPage />
               </Suspense>
             }
           />

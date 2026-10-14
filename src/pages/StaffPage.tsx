@@ -5,6 +5,12 @@ import { SeoHead } from '../components/SeoHead';
 import { DIVISIONS, links, type Division } from '../lib/config';
 import { sendConfirmation, sendTestEmail, type DonationMethod } from '../lib/registration';
 import { isSupabaseConfigured, readErrorMessage, supabase } from '../lib/supabase';
+import {
+  downloadWaiverPdf,
+  resendWaiverLink,
+  sendMergeNotice,
+  waiverSigningLink,
+} from '../lib/waiver';
 
 type RosterMember = {
   slot: string;
@@ -14,6 +20,13 @@ type RosterMember = {
   grade: string | null;
   guardian_name: string | null;
   guardian_email: string | null;
+  /** Absent until supabase/schema.sql has been re-run with waiver signing. */
+  waiver_token?: string;
+  waiver_signed_name?: string | null;
+  waiver_signed_at?: string | null;
+  waiver_signer_role?: 'guardian' | 'self' | null;
+  /** The team this competitor registered with, if staff moved them since. */
+  original_team_code?: string | null;
 };
 
 type RosterRow = {
@@ -46,7 +59,26 @@ type RosterRow = {
   donation_method: DonationMethod | null;
   donation_received: boolean;
   confirmation_sent_at: string | null;
+  open_to_merge?: boolean;
+  /** Set on a team staff combined into another (it is then cancelled). */
+  merged_into_code?: string | null;
 };
+
+/** A team's own size limit, whatever the settings say: answer sheets have four slots. */
+const SLOT_CAP = 4;
+
+const isLive = (row: RosterRow) => row.status !== 'cancelled';
+
+function waiverCounts(row: RosterRow) {
+  const signed = row.members.filter((member) => member.waiver_signed_at).length;
+  return { signed, total: row.members.length };
+}
+
+function signedLabel(member: RosterMember) {
+  if (!member.waiver_signed_at) return '';
+  const who = member.waiver_signer_role === 'self' ? 'the competitor (18+)' : 'parent or guardian';
+  return `Signed by ${member.waiver_signed_name ?? '—'} (${who}), ${new Date(member.waiver_signed_at).toLocaleString()}`;
+}
 
 const METHOD_LABEL: Record<DonationMethod, string> = {
   zelle: 'Zelle',
@@ -81,6 +113,8 @@ type Settings = {
 
 const STATUSES = ['pending', 'confirmed', 'waitlist', 'cancelled'] as const;
 
+type NeedsFilter = 'all' | 'waivers' | 'merge';
+
 function csvCell(value: unknown): string {
   const text = value == null ? '' : String(value);
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -112,10 +146,17 @@ function toCsv(rows: RosterRow[]): string {
     'coach_email',
     'notes',
     'staff_notes',
+    'waiver_signed',
+    'waiver_signed_by',
+    'waiver_signer_role',
+    'waiver_signed_at',
     'media_release_signed_by',
     'media_release_signed_at',
-    'liability_waiver_signed_by',
-    'liability_waiver_signed_at',
+    'captain_waiver_ack_by',
+    'captain_waiver_ack_at',
+    'open_to_merge',
+    'original_team_code',
+    'merged_into',
     'donation_pledge',
     'donation_method',
     'donation_received',
@@ -149,10 +190,17 @@ function toCsv(rows: RosterRow[]): string {
         row.coach_email,
         row.notes,
         row.staff_notes,
+        member ? (member.waiver_signed_at ? 'yes' : 'no') : '',
+        member?.waiver_signed_name ?? '',
+        member?.waiver_signer_role ?? '',
+        member?.waiver_signed_at ?? '',
         row.media_release_signed_by,
         row.media_release_signed_at,
         row.liability_waiver ? row.liability_waiver_signed_by : '',
         row.liability_waiver_signed_at,
+        row.open_to_merge ? 'yes' : '',
+        member?.original_team_code ?? '',
+        row.merged_into_code ?? '',
         row.donation_pledge,
         row.donation_method ? METHOD_LABEL[row.donation_method] : '',
         row.donation_received ? 'yes' : '',
@@ -251,6 +299,88 @@ function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   );
 }
 
+/** Pick a team in the same division with room, and move this team's competitors into it. */
+function MergeBox({
+  row,
+  rows,
+  target,
+  onTarget,
+  busy,
+  onMerge,
+}: {
+  row: RosterRow;
+  rows: RosterRow[];
+  target: string;
+  onTarget: (id: string) => void;
+  busy: boolean;
+  onMerge: (into: RosterRow) => void;
+}) {
+  const candidates = rows
+    .filter(
+      (other) =>
+        other.id !== row.id &&
+        isLive(other) &&
+        other.division === row.division &&
+        other.members.length + row.members.length <= SLOT_CAP,
+    )
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.open_to_merge)) - Number(Boolean(a.open_to_merge)) ||
+        a.members.length - b.members.length ||
+        a.team_code.localeCompare(b.team_code),
+    );
+  const chosen = candidates.find((other) => other.id === target);
+  const id = `merge-${row.id}`;
+  return (
+    <div className="staff__merge">
+      <h4 className="dive__subhead">
+        <PixelIcon name="people" size={22} /> Combine with another team
+      </h4>
+      {candidates.length === 0 ? (
+        <p className="field__hint">
+          No other {divisionLabel(row.division).toLowerCase()} team has room for{' '}
+          {row.members.length} more.
+        </p>
+      ) : (
+        <>
+          <label className="field__label" htmlFor={id}>
+            Move {row.members.length === 1 ? 'this competitor' : `these ${row.members.length} competitors`} into
+          </label>
+          <div className="staff__merge-row">
+            <select
+              id={id}
+              className="select"
+              value={chosen ? target : ''}
+              onChange={(event) => onTarget(event.target.value)}
+            >
+              <option value="">Choose a team…</option>
+              {candidates.map((other) => (
+                <option value={other.id} key={other.id}>
+                  {other.team_code} · {other.team_name} ({other.members.length}/{SLOT_CAP}
+                  {other.open_to_merge ? ', open to combining' : ''})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn btn--deep btn--sm"
+              disabled={!chosen || busy}
+              onClick={() => chosen && onMerge(chosen)}
+            >
+              {busy ? 'Combining…' : 'Combine'}
+            </button>
+          </div>
+          <p className="field__hint">
+            Team {row.team_code} is then cancelled and its competitors get new IDs on the chosen
+            team. Both teams&apos; contacts are emailed. Teams that asked to be combined are listed
+            first.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Dashboard({ session }: { session: Session }) {
   const [rows, setRows] = useState<RosterRow[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -259,6 +389,11 @@ function Dashboard({ session }: { session: Session }) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [divisionFilter, setDivisionFilter] = useState<'all' | Division>('all');
+  const [needsFilter, setNeedsFilter] = useState<NeedsFilter>('all');
+  /** Key of the waiver action in flight, e.g. "pdf:07A". */
+  const [waiverBusy, setWaiverBusy] = useState<string | null>(null);
+  const [mergeTarget, setMergeTarget] = useState('');
+  const [merging, setMerging] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
@@ -308,6 +443,12 @@ function Dashboard({ session }: { session: Session }) {
     return rows.filter((row) => {
       if (statusFilter !== 'all' && row.status !== statusFilter) return false;
       if (divisionFilter !== 'all' && row.division !== divisionFilter) return false;
+      if (needsFilter === 'waivers' && !(isLive(row) && waiverCounts(row).signed < row.members.length)) {
+        return false;
+      }
+      if (needsFilter === 'merge' && !(isLive(row) && row.open_to_merge && row.members.length < SLOT_CAP)) {
+        return false;
+      }
       if (!needle) return true;
       const haystack = [
         row.team_code,
@@ -322,7 +463,7 @@ function Dashboard({ session }: { session: Session }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, query, statusFilter, divisionFilter]);
+  }, [rows, query, statusFilter, divisionFilter, needsFilter]);
 
   const competitorCount = useMemo(
     () =>
@@ -391,6 +532,72 @@ function Dashboard({ session }: { session: Session }) {
     void load();
   }
 
+  function flash(message: string) {
+    setCopied(message);
+    window.setTimeout(() => setCopied(null), 3500);
+  }
+
+  async function waiverPdf(member: RosterMember) {
+    if (!member.waiver_token) return;
+    setWaiverBusy(`pdf:${member.competitor_id}`);
+    try {
+      await downloadWaiverPdf(member.waiver_token, member.competitor_id);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not download that waiver.');
+    } finally {
+      setWaiverBusy(null);
+    }
+  }
+
+  async function resendWaiver(member: RosterMember) {
+    if (!member.waiver_token) return;
+    if (!window.confirm(`Email ${member.guardian_email ?? 'the parent or guardian'} the waiver link for ${member.full_name} again?`)) {
+      return;
+    }
+    setWaiverBusy(`mail:${member.competitor_id}`);
+    const result = await resendWaiverLink(member.waiver_token);
+    setWaiverBusy(null);
+    if (result.sent) flash(result.message);
+    else setError(`Could not resend the waiver link: ${result.message}`);
+  }
+
+  /**
+   * Combines a small team into another. The database moves the competitors
+   * to free letters on the target and cancels the source; then both teams'
+   * contacts (and coaches) are emailed the new IDs.
+   */
+  async function mergeInto(from: RosterRow, into: RosterRow) {
+    if (!supabase) return;
+    const taken = new Set(into.members.map((member) => member.slot));
+    const free = ['A', 'B', 'C', 'D'].filter((letter) => !taken.has(letter));
+    const moves = from.members
+      .slice()
+      .sort((a, b) => a.slot.localeCompare(b.slot))
+      .map((member, index) => `  ${member.competitor_id} ${member.full_name} → ${into.team_code}${free[index]}`)
+      .join('\n');
+    if (
+      !window.confirm(
+        `Combine team ${from.team_code} (${from.team_name}) into team ${into.team_code} (${into.team_name})?\n\n${moves}\n\nTeam ${from.team_code} will be marked cancelled and "combined into ${into.team_code}". Signed waivers move with each competitor. Both teams' contacts will be emailed the new IDs.`,
+      )
+    ) {
+      return;
+    }
+    setMerging(true);
+    const { error: mergeError } = await supabase.rpc('merge_teams', { p_from: from.id, p_into: into.id });
+    if (mergeError) {
+      setMerging(false);
+      setError(readErrorMessage(mergeError, 'Could not combine those teams.'));
+      return;
+    }
+    const notice = await sendMergeNotice(from.team_code);
+    setMerging(false);
+    setMergeTarget('');
+    setExpanded(into.id);
+    if (notice.sent) flash(`Combined ${from.team_code} into ${into.team_code}. ${notice.message}`);
+    else setError(`Combined ${from.team_code} into ${into.team_code}, but the emails failed: ${notice.message} Email both teams the new IDs yourself.`);
+    void load();
+  }
+
   async function toggleRegistration() {
     if (!supabase || !settings) return;
     const next = !settings.registration_open;
@@ -439,6 +646,26 @@ function Dashboard({ session }: { session: Session }) {
     () => uniq(filtered.flatMap((row) => row.members.map((member) => member.guardian_email))),
     [filtered],
   );
+  const unsignedGuardianEmails = useMemo(
+    () =>
+      uniq(
+        filtered
+          .filter(isLive)
+          .flatMap((row) =>
+            row.members.filter((member) => !member.waiver_signed_at).map((member) => member.guardian_email),
+          ),
+      ),
+    [filtered],
+  );
+
+  const waiverTotals = useMemo(() => {
+    const live = rows.filter(isLive);
+    return {
+      signed: live.reduce((sum, row) => sum + waiverCounts(row).signed, 0),
+      total: live.reduce((sum, row) => sum + row.members.length, 0),
+      openToMerge: live.filter((row) => row.open_to_merge && row.members.length < SLOT_CAP).length,
+    };
+  }, [rows]);
 
   /** Live (non-cancelled) teams and competitors per division, for the tabs. */
   const divisionCounts = useMemo(() => {
@@ -485,10 +712,11 @@ function Dashboard({ session }: { session: Session }) {
   /** A printable check-in sheet: one line per competitor, ID first. */
   function printCheckIn() {
     const lines = filtered
+      .filter(isLive)
       .flatMap((row) =>
         row.members.map(
           (member) =>
-            `<tr><td class="id">${escapeHtml(member.competitor_id)}</td><td>${escapeHtml(member.full_name)}</td><td>${escapeHtml(row.team_name)}</td><td>${escapeHtml(member.grade)}</td><td class="box"></td></tr>`,
+            `<tr><td class="id">${escapeHtml(member.competitor_id)}</td><td>${escapeHtml(member.full_name)}</td><td>${escapeHtml(row.team_name)}</td><td>${escapeHtml(member.grade)}</td><td class="${member.waiver_signed_at ? 'ok' : 'missing'}">${member.waiver_signed_at ? 'Signed' : 'MISSING'}</td><td class="box"></td></tr>`,
         ),
       )
       .join('');
@@ -506,8 +734,10 @@ function Dashboard({ session }: { session: Session }) {
         th{background:#f0c000}
         .id{font-family:ui-monospace,monospace;font-weight:700}
         .box{width:70px}
-      </style><h1>SFMO 2027 — check-in (${filtered.length} teams)</h1>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Team</th><th>Grade</th><th>Signed in</th></tr></thead>
+        .missing{font-weight:700;color:#b3261e}
+        .ok{color:#2e6b2a}
+      </style><h1>SFMO 2027 — check-in (${filtered.filter(isLive).length} teams)</h1>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Team</th><th>Grade</th><th>Waiver</th><th>Signed in</th></tr></thead>
       <tbody>${lines}</tbody></table>`,
     );
     win.document.close();
@@ -571,6 +801,11 @@ function Dashboard({ session }: { session: Session }) {
         Donations: ${giving.pledged} pledged by {giving.teams} team{giving.teams === 1 ? '' : 's'} ·{' '}
         {giving.received} marked received
       </p>
+      <p className="staff__giving mono">
+        Waivers: {waiverTotals.signed} of {waiverTotals.total} competitors signed ·{' '}
+        {waiverTotals.openToMerge} small team{waiverTotals.openToMerge === 1 ? '' : 's'} open to
+        combining
+      </p>
 
       {settings && (
         <div className={`notice ${settings.registration_open ? 'notice--ok' : 'notice--warn'}`}>
@@ -614,6 +849,14 @@ function Dashboard({ session }: { session: Session }) {
           </button>
           <button type="button" className="btn" onClick={() => void copy('guardian emails', guardianEmails)}>
             Copy guardian emails ({guardianEmails.length})
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void copy('emails of guardians yet to sign', unsignedGuardianEmails)}
+            title="Parents and guardians who still have a waiver to sign, for a reminder"
+          >
+            Copy unsigned-waiver emails ({unsignedGuardianEmails.length})
           </button>
           <button
             type="button"
@@ -716,6 +959,21 @@ function Dashboard({ session }: { session: Session }) {
             ))}
           </select>
         </div>
+        <div className="field">
+          <label className="field__label" htmlFor="staff-needs">
+            Needs attention
+          </label>
+          <select
+            id="staff-needs"
+            className="select"
+            value={needsFilter}
+            onChange={(event) => setNeedsFilter(event.target.value as NeedsFilter)}
+          >
+            <option value="all">Everything</option>
+            <option value="waivers">Waivers still to sign</option>
+            <option value="merge">Small teams open to combining</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -739,6 +997,7 @@ function Dashboard({ session }: { session: Session }) {
                 <th>Team</th>
                 <th>Division</th>
                 <th>Competitors</th>
+                <th>Waivers</th>
                 <th>School</th>
                 <th>Contact</th>
                 <th>Status</th>
@@ -750,16 +1009,36 @@ function Dashboard({ session }: { session: Session }) {
               {filtered.map((row) => (
                 <Fragment key={row.id}>
                   <tr
-                    onClick={() => setExpanded(expanded === row.id ? null : row.id)}
+                    onClick={() => {
+                      setExpanded(expanded === row.id ? null : row.id);
+                      setMergeTarget('');
+                    }}
                     className="staff__row"
                   >
                     <td className="mono">{row.team_code}</td>
                     <td>
                       <strong>{row.team_name}</strong>
+                      {row.merged_into_code && (
+                        <span className="badge badge--muted staff__tag">→ team {row.merged_into_code}</span>
+                      )}
+                      {isLive(row) && row.open_to_merge && row.members.length < SLOT_CAP && (
+                        <span className="badge staff__tag">open to combine</span>
+                      )}
                     </td>
                     <td>{divisionLabel(row.division)}</td>
                     <td className="mono">
-                      {row.members.map((member) => member.competitor_id).join(' ')}
+                      {row.members.map((member) => member.competitor_id).join(' ') || '—'}
+                    </td>
+                    <td>
+                      {row.members.length === 0 ? (
+                        '—'
+                      ) : (
+                        <span
+                          className={`badge ${waiverCounts(row).signed === row.members.length ? 'badge--kelp' : 'badge--sub'}`}
+                        >
+                          {waiverCounts(row).signed}/{row.members.length}
+                        </span>
+                      )}
                     </td>
                     <td>{row.school ?? '—'}</td>
                     <td>
@@ -796,28 +1075,89 @@ function Dashboard({ session }: { session: Session }) {
                   </tr>
                   {expanded === row.id && (
                     <tr className="staff__detail">
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className="staff__detail-grid">
                           <div>
                             <h4 className="dive__subhead">Roster</h4>
                             <ul className="id-list">
                               {row.members.map((member) => (
-                                <li className="id-list__row" key={member.slot}>
+                                <li className="id-list__row staff__member" key={member.competitor_id}>
                                   <span className="id-list__id pixel">{member.competitor_id}</span>
                                   <span className="id-list__name">
                                     {member.full_name}
-                                    {member.grade ? <small> · Grade {member.grade}</small> : null}
-                                    {member.email ? <small> · {member.email}</small> : null}
-                                    {member.guardian_name ? (
-                                      <small className="staff__guardian">
-                                        Waiver signed by {member.guardian_name}
-                                        {member.guardian_email ? ` · ${member.guardian_email}` : ''}
+                                    {(member.grade || member.email || member.original_team_code) && (
+                                      <small>
+                                        {[
+                                          member.grade && `Grade ${member.grade}`,
+                                          member.email,
+                                          member.original_team_code &&
+                                            `moved from team ${member.original_team_code}`,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(' · ')}
                                       </small>
-                                    ) : null}
+                                    )}
+                                    <small className="staff__guardian">
+                                      Parent or guardian: {member.guardian_name ?? '—'}
+                                      {member.guardian_email ? ` · ${member.guardian_email}` : ''}
+                                    </small>
+                                    <small
+                                      className={`staff__waiver ${member.waiver_signed_at ? 'staff__waiver--ok' : 'staff__waiver--todo'}`}
+                                    >
+                                      {member.waiver_signed_at
+                                        ? signedLabel(member)
+                                        : member.waiver_token
+                                          ? 'Waiver not signed yet'
+                                          : 'Waiver signing not set up — re-run supabase/schema.sql'}
+                                    </small>
                                   </span>
+                                  {member.waiver_token && (
+                                    <span className="staff__member-actions">
+                                      {member.waiver_signed_at && (
+                                        <button
+                                          type="button"
+                                          className="btn btn--sm"
+                                          disabled={waiverBusy === `pdf:${member.competitor_id}`}
+                                          onClick={() => void waiverPdf(member)}
+                                        >
+                                          {waiverBusy === `pdf:${member.competitor_id}` ? 'Preparing…' : 'PDF'}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        className="btn btn--sm"
+                                        onClick={() =>
+                                          void copy('signing link', [waiverSigningLink(member.waiver_token!)])
+                                        }
+                                        title="The parent or guardian's private link. Anyone with it can sign, so only send it to them."
+                                      >
+                                        Copy link
+                                      </button>
+                                      {!member.waiver_signed_at && member.guardian_email && (
+                                        <button
+                                          type="button"
+                                          className="btn btn--sm"
+                                          disabled={waiverBusy === `mail:${member.competitor_id}`}
+                                          onClick={() => void resendWaiver(member)}
+                                        >
+                                          {waiverBusy === `mail:${member.competitor_id}` ? 'Sending…' : 'Email link'}
+                                        </button>
+                                      )}
+                                    </span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
+                            {isLive(row) && row.members.length > 0 && row.members.length < SLOT_CAP && (
+                              <MergeBox
+                                row={row}
+                                rows={rows}
+                                target={mergeTarget}
+                                onTarget={setMergeTarget}
+                                busy={merging}
+                                onMerge={(into) => void mergeInto(row, into)}
+                              />
+                            )}
                           </div>
                           <div>
                             <h4 className="dive__subhead">Details</h4>
@@ -855,17 +1195,40 @@ function Dashboard({ session }: { session: Session }) {
                                 </dd>
                               </div>
                               <div className="facts__row">
-                                <dt>Liability waiver</dt>
+                                <dt>Liability waivers</dt>
                                 <dd>
+                                  {waiverCounts(row).signed} of {row.members.length} signed by a
+                                  parent or guardian
                                   {row.liability_waiver && row.liability_waiver_signed_by
-                                    ? `Confirmed by captain ${row.liability_waiver_signed_by}${
+                                    ? `. Captain ${row.liability_waiver_signed_by} acknowledged${
                                         row.liability_waiver_signed_at
                                           ? `, ${new Date(row.liability_waiver_signed_at).toLocaleDateString()}`
                                           : ''
                                       }`
-                                    : 'Not signed (registered before waivers were added)'}
+                                    : ''}
                                 </dd>
                               </div>
+                              {row.merged_into_code && (
+                                <div className="facts__row">
+                                  <dt>Combined</dt>
+                                  <dd>
+                                    Into team {row.merged_into_code}. Its competitors are listed
+                                    there now.
+                                  </dd>
+                                </div>
+                              )}
+                              {isLive(row) && row.members.length < SLOT_CAP && (
+                                <div className="facts__row">
+                                  <dt>Combining</dt>
+                                  <dd>{row.open_to_merge ? 'Open to being combined' : 'Did not ask to be combined'}</dd>
+                                </div>
+                              )}
+                              {row.staff_notes && (
+                                <div className="facts__row">
+                                  <dt>Staff notes</dt>
+                                  <dd className="staff__notes">{row.staff_notes}</dd>
+                                </div>
+                              )}
                               <div className="facts__row">
                                 <dt>Donation</dt>
                                 <dd>

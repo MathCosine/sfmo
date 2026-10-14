@@ -6,8 +6,9 @@ export type MemberInput = {
   email: string;
   grade: string;
   school: string;
-  /** Parent or guardian who signed this competitor's liability waiver (the
-   * competitor themself if 18 or older). Their typed name is the signature. */
+  /** Parent or guardian who will sign this competitor's liability waiver (the
+   * competitor themself if 18 or older). We email them a private link to
+   * sign it at /waiver, and a signed PDF afterwards. */
   guardian_name: string;
   guardian_email: string;
 };
@@ -22,11 +23,14 @@ export type TeamInput = {
   distance_attested: boolean;
   /** The captain's media release, given for the whole team. */
   media_release: boolean;
-  /** Captain's typed signature; must match a competitor's name on the roster.
-   * The same signature confirms the liability waiver. */
+  /** Captain's typed signature; must match a competitor's name on the roster. */
   media_release_signed_by: string;
-  /** Captain confirms every competitor's guardian has signed the waiver. */
+  /** Captain confirms each parent or guardian named will sign the waiver
+   * before competition day. The waivers themselves are signed at /waiver. */
   liability_waiver: boolean;
+  /** A team of fewer than four that is happy for staff to combine it with
+   * another small team. Ignored for a full team. */
+  open_to_merge: boolean;
   /** Whole dollars; null when the team chose not to pledge. Optional. */
   donation_pledge: number | null;
   donation_method: DonationMethod | null;
@@ -49,6 +53,8 @@ export type ReceiptMember = {
   competitor_id: string;
   full_name: string;
   grade: string | null;
+  /** Whether a parent or guardian (or the 18+ competitor) has signed. */
+  waiver_signed?: boolean;
 };
 
 export type TeamReceipt = {
@@ -60,6 +66,10 @@ export type TeamReceipt = {
   created_at: string;
   donation_pledge: number | null;
   donation_method: DonationMethod | null;
+  open_to_merge?: boolean;
+  /** Set when staff combined this team into another; members then show the
+   * IDs they have in that team. */
+  merged_into?: { team_code: string; team_name: string } | null;
   members: ReceiptMember[];
 };
 
@@ -139,8 +149,8 @@ export async function lookupTeam(teamCode: string, contactEmail: string): Promis
 }
 
 /**
- * Asks the send-confirmation Edge Function to email the team and each
- * guardian. It only sends once per team, and only for a matching team ID and
+ * Asks the send-confirmation Edge Function to email the team, and each
+ * parent or guardian their waiver signing link. It only sends once per team, and only for a matching team ID and
  * contact email, so calling it again is harmless. Never throws: registration
  * has already succeeded, and the email is a courtesy on top.
  */
@@ -194,6 +204,7 @@ export function emptyTeam(): TeamInput {
     media_release: false,
     media_release_signed_by: '',
     liability_waiver: false,
+    open_to_merge: true,
     donation_pledge: null,
     donation_method: null,
     school: '',

@@ -1,14 +1,14 @@
 /**
- * The two documents signed at registration. The registration page renders
- * them, and the guardian confirmation email links back to that page — so this
- * file is the one place to edit their wording.
+ * The two documents behind registration.
  *
- * DRAFT: the liability waiver has not been reviewed by a lawyer. Have an adult
- * organiser (and ideally your venue's insurer) read it before registration opens.
+ * The liability waiver itself lives in public/legal/<id>.json (see
+ * waiverDoc in src/lib/config.ts): parents and guardians read and sign that
+ * text at /waiver, and the signed PDF prints it. What is here is only the
+ * plain-language summary shown on the registration page — keep it consistent
+ * with the JSON whenever either changes.
  *
- * Each document also has a one-line `gist` shown above it. The gist is a
- * plain-language summary only; the full text is what people agree to, so
- * keep the two consistent when editing either.
+ * The media release is accepted by the team captain at registration, and its
+ * full text is here.
  */
 import type { PixelIconName } from '../components/PixelIcon';
 
@@ -20,47 +20,50 @@ export const MEDIA_RELEASE =
 
 export type Clause = { title: string; icon: PixelIconName; text: string };
 
-export const LIABILITY_WAIVER: { gist: string; intro: string; clauses: Clause[]; signing: string } = {
-  gist: 'Your competitor may take part; you accept the everyday risks of an event; you release us from claims except for gross negligence or wilful misconduct; and we may arrange urgent medical care if we cannot reach you.',
-  intro:
-    'Each competitor\'s parent or legal guardian signs this waiver for that competitor. A competitor who is 18 or older signs it for themself. "We" means the San Francisco Math Initiative, its organisers and volunteers.',
-  clauses: [
-    {
-      title: 'Permission',
-      icon: 'check',
-      text: 'I give permission for the competitor named next to my signature to take part in the San Francisco Math Open 2027 ("SFMO 2027"), in person or online.',
-    },
-    {
-      title: 'Risks',
-      icon: 'warn',
-      text: 'I understand that taking part carries the ordinary risks of any day-long event — including travel to and from the venue, moving around a shared building, and food eaten during the day — and I accept those risks.',
-    },
-    {
-      title: 'Release',
-      icon: 'shield',
-      text: 'To the fullest extent the law allows, I release us, our sponsors and the venue from claims for injury, illness, loss or damage arising from the competitor\'s participation, except where caused by gross negligence or wilful misconduct.',
-    },
-    {
-      title: 'Supervision',
-      icon: 'eye',
-      text: 'At the venue, we supervise the competition rooms during scheduled sessions. Before check-in, after the awards ceremony, any time the competitor leaves the venue, and throughout the online division, the competitor is my responsibility.',
-    },
-    {
-      title: 'Medical care',
-      icon: 'cross',
-      text: 'If the competitor needs urgent medical care and I cannot be reached, I authorise us to arrange it, and I accept responsibility for its cost. I will tell the organisers about any condition they should know about.',
-    },
-    {
-      title: 'Conduct',
-      icon: 'star',
-      text: 'The competitor will follow the competition rules and staff instructions. We may remove a competitor whose conduct endangers others or breaks the rules.',
-    },
-    {
-      title: 'Law',
-      icon: 'scales',
-      text: 'This waiver is governed by the laws of the State of California. If any part of it is unenforceable, the rest still applies.',
-    },
-  ],
-  signing:
-    'Typing your full name below is your signature, with the same effect as signing by hand.',
-};
+/** Matches `summary` in the waiver JSON. */
+export const WAIVER_GIST =
+  'Your competitor may take part; you accept the risks of a day-long event; you release the organizers, sponsors and venue from claims except gross negligence or willful misconduct; and staff may arrange emergency medical care if you cannot be reached.';
+
+/** The waiver's main points, section by section. A summary, not the waiver. */
+export const WAIVER_KEY_POINTS: Clause[] = [
+  {
+    title: 'Permission',
+    icon: 'check',
+    text: 'The competitor may take part in SFMO 2027, in person or online. Taking part is voluntary.',
+  },
+  {
+    title: 'Risks',
+    icon: 'warn',
+    text: 'You accept the risks of a day-long event — travel, falls, crowded rooms, food and allergies, illness — including those from ordinary negligence.',
+  },
+  {
+    title: 'Release',
+    icon: 'shield',
+    text: 'You release the organizers, sponsors and venue from claims, except for gross negligence or willful misconduct.',
+  },
+  {
+    title: 'Medical care',
+    icon: 'cross',
+    text: 'Tell us about medical needs beforehand. If we cannot reach you in an emergency, staff may arrange care, at your cost.',
+  },
+  {
+    title: 'Supervision',
+    icon: 'eye',
+    text: 'We supervise the competition rooms during sessions. Before check-in, after the awards, off-site and online, the competitor is your responsibility.',
+  },
+  {
+    title: 'Conduct',
+    icon: 'star',
+    text: 'The competitor follows the rules and staff instructions. We may remove anyone who breaks the rules or endangers others.',
+  },
+  {
+    title: 'Signing online',
+    icon: 'doc',
+    text: 'You sign by typing your name. We record when and from what browser, and email you the signed PDF.',
+  },
+  {
+    title: 'Law',
+    icon: 'scales',
+    text: 'California law applies. If one part is unenforceable, the rest still stands.',
+  },
+];

@@ -49,6 +49,11 @@ function doPost(e) {
     if (!isEmail(m.to) || (m.cc && !isEmail(m.cc)) || !m.subject || !m.text) {
       return reply({ ok: false, error: 'Each message needs one valid "to", a subject and text.' });
     }
+    const files = m.attachments || [];
+    if (!Array.isArray(files) || files.length > 5 ||
+        files.some((a) => !a || typeof a.filename !== 'string' || typeof a.content !== 'string')) {
+      return reply({ ok: false, error: 'Attachments must be at most 5 files with a filename and base64 content.' });
+    }
   }
 
   // Check the whole batch fits today's quota before sending any of it, so a
@@ -64,6 +69,12 @@ function doPost(e) {
     if (m.html) options.htmlBody = m.html;
     if (m.cc) options.cc = m.cc;
     if (m.replyTo) options.replyTo = m.replyTo;
+    if (m.attachments && m.attachments.length) {
+      // Signed waiver PDFs, sent as base64 by the Edge Function.
+      options.attachments = m.attachments.map((a) =>
+        Utilities.newBlob(Utilities.base64Decode(a.content), a.contentType || 'application/pdf', a.filename),
+      );
+    }
     MailApp.sendEmail(options);
   }
   return reply({ ok: true, sent: messages.length });

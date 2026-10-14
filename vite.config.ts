@@ -81,6 +81,15 @@ const ROUTES: RouteMeta[] = [
     priority: '0.6',
   },
   {
+    // Staff bookmark this; without a file of its own it loads via 404.html
+    // with a 404 status. Disallowed in robots.txt as well.
+    path: 'staff',
+    title: 'Staff Portal — SFMO',
+    description: 'Internal registration management for the San Francisco Math Initiative.',
+    priority: '0.1',
+    noindex: true,
+  },
+  {
     // Parents arrive here from a private signing link, so it must load as a
     // real page, but it should never appear in search results.
     path: 'waiver',

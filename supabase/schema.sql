@@ -146,6 +146,11 @@ alter table public.team_members add column if not exists waiver_signed_ua text;
 alter table public.team_members add column if not exists waiver_doc_id text;
 alter table public.team_members add column if not exists waiver_doc_sha256 text;
 alter table public.team_members add column if not exists waiver_pdf_sent_at timestamptz;
+-- 'online' through the link, or 'email': a parent who could not use the link
+-- emailed their agreement and a staff member (waiver_recorded_by) entered it.
+alter table public.team_members add column if not exists waiver_method text
+  check (waiver_method is null or waiver_method in ('online', 'email'));
+alter table public.team_members add column if not exists waiver_recorded_by text;
 -- Set when staff combine teams: the team this competitor registered with.
 alter table public.team_members add column if not exists original_team_id uuid
   references public.teams (id) on delete set null;
@@ -688,6 +693,7 @@ begin
           'signed_name', g.waiver_signed_name,
           'signed_at', g.waiver_signed_at,
           'signer_role', g.waiver_signer_role,
+          'method', coalesce(g.waiver_method, case when g.waiver_signed_at is not null then 'online' end),
           'is_link_owner', g.id = me.id
         ) order by g.slot
       )
@@ -767,7 +773,9 @@ begin
       waiver_signed_ip = left(ip, 100),
       waiver_signed_ua = left(p_user_agent, 400),
       waiver_doc_id = p_doc_id,
-      waiver_doc_sha256 = p_doc_sha256
+      waiver_doc_sha256 = p_doc_sha256,
+      waiver_method = 'online',
+      waiver_recorded_by = null
   where m.waiver_signed_at is null
     and m.id in (
       select g.id from public.waiver_group(p_token) g
@@ -819,7 +827,9 @@ begin
           'signed_ua', g.waiver_signed_ua,
           'doc_id', g.waiver_doc_id,
           'doc_sha256', g.waiver_doc_sha256,
-          'waiver_token', g.waiver_token
+          'waiver_token', g.waiver_token,
+          'method', coalesce(g.waiver_method, case when g.waiver_signed_at is not null then 'online' end),
+          'recorded_by', g.waiver_recorded_by
         ) order by g.slot
       )
       from public.waiver_group(p_token) g
@@ -853,6 +863,78 @@ begin
 end;
 $$;
 
+-- Staff only: a parent or guardian who could not use the link emailed their
+-- agreement instead (the wording is in the signing email). Records it for
+-- that one competitor, dated when the email arrived, marked 'email', and
+-- stamped with the staff member who entered it. Keep the email itself.
+create or replace function public.record_emailed_waiver(
+  p_token uuid,
+  p_signed_name text,
+  p_signer_role text,
+  p_received_at timestamptz,
+  p_doc_id text,
+  p_doc_sha256 text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  me     public.team_members;
+  t      public.teams;
+  signer text := btrim(regexp_replace(coalesce(p_signed_name, ''), '\s+', ' ', 'g'));
+  staff  text;
+begin
+  if not public.is_staff() then
+    raise exception 'Only staff can record a waiver.' using errcode = '42501';
+  end if;
+  select * into me from public.team_members where waiver_token = p_token for update;
+  if me.id is null then
+    raise exception 'No competitor has that waiver link.' using errcode = 'P0001';
+  end if;
+  if me.waiver_signed_at is not null then
+    raise exception '% already has a signed waiver.', me.competitor_id using errcode = 'P0001';
+  end if;
+  select * into t from public.teams where id = me.team_id;
+  if t.status = 'cancelled' then
+    raise exception 'That team is cancelled.' using errcode = 'P0001';
+  end if;
+  if char_length(signer) < 2 or char_length(signer) > 120 then
+    raise exception 'Enter the full name they gave in their email.' using errcode = 'P0001';
+  end if;
+  if p_signer_role is null or p_signer_role not in ('guardian', 'self') then
+    raise exception 'Choose parent or guardian, or the competitor (18+).' using errcode = 'P0001';
+  end if;
+  if p_received_at is null
+     or p_received_at > now() + interval '1 day'
+     or p_received_at < t.created_at - interval '1 day' then
+    raise exception 'Enter the date their email arrived: not before the team registered, and not in the future.'
+      using errcode = 'P0001';
+  end if;
+  if coalesce(p_doc_id, '') !~ '^[a-z0-9-]{3,80}$' or coalesce(p_doc_sha256, '') !~ '^[0-9a-f]{64}$' then
+    raise exception 'The waiver document could not be verified. Reload the page and try again.'
+      using errcode = 'P0001';
+  end if;
+
+  select s.email into staff from public.staff_members s where s.user_id = auth.uid();
+
+  update public.team_members
+  set waiver_signed_name = signer,
+      waiver_signed_at = p_received_at,
+      waiver_signer_role = p_signer_role,
+      waiver_signed_ip = null,
+      waiver_signed_ua = null,
+      waiver_doc_id = p_doc_id,
+      waiver_doc_sha256 = p_doc_sha256,
+      waiver_method = 'email',
+      waiver_recorded_by = left(coalesce(staff, 'staff'), 200)
+  where id = me.id;
+
+  return public.get_waiver(p_token);
+end;
+$$;
+
 revoke all on function public.waiver_group(uuid) from public, anon, authenticated;
 revoke all on function public.get_waiver(uuid) from public;
 revoke all on function public.sign_waiver(uuid, text, text, boolean, text, text, text) from public;
@@ -862,6 +944,8 @@ grant execute on function public.get_waiver(uuid) to anon, authenticated;
 grant execute on function public.sign_waiver(uuid, text, text, boolean, text, text, text) to anon, authenticated;
 grant execute on function public.waiver_record(uuid) to service_role;
 grant execute on function public.claim_waiver_pdf(uuid) to service_role;
+revoke all on function public.record_emailed_waiver(uuid, text, text, timestamptz, text, text) from public, anon;
+grant execute on function public.record_emailed_waiver(uuid, text, text, timestamptz, text, text) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Combining teams (staff only)
@@ -1037,6 +1121,8 @@ select
           'waiver_signed_name', m.waiver_signed_name,
           'waiver_signed_at', m.waiver_signed_at,
           'waiver_signer_role', m.waiver_signer_role,
+          'waiver_method', coalesce(m.waiver_method, case when m.waiver_signed_at is not null then 'online' end),
+          'waiver_recorded_by', m.waiver_recorded_by,
           'original_team_code', (select o.team_code from public.teams o where o.id = m.original_team_id)
         ) order by m.slot
       )

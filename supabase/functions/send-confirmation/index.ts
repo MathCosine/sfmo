@@ -13,7 +13,8 @@
 // It also handles the liability waiver, which parents and guardians sign
 // themselves at <site>/waiver?t=<token>:
 //   { waiver_signed: token }  after signing: emails the signed PDF(s), once;
-//   { waiver_pdf: token }     returns a signed PDF (the page's Download link);
+//   { waiver_pdf: token }     returns a signed PDF (the page's Download link),
+//                             or a marked sample for the test email's link;
 //   { resend_waiver: token }  staff only: emails the signing link again;
 //   { merge_notice: code }    staff only: tells both teams they were combined;
 //   { test: true }            staff only: sample copies of the emails to you.
@@ -214,6 +215,7 @@ export function waiverRequestEmail(
   const lead = done
     ? `The SFMO 2027 liability waiver for ${who} is already signed — thank you. You can view it, and download the signed copy, here:`
     : `${who} ${competitors.length > 1 ? 'are' : 'is'} registered for the San Francisco Math Open 2027 (${EVENT_DATE}) on team ${team.team_code}, ${team.team_name}, and you were named as the parent or guardian who signs their liability waiver. Please read it and sign it here — it takes about two minutes:`;
+  const fallback = emailFallback(competitors.map((g) => `${g.competitor_name} (${g.competitor_id})`));
   const text = [
     `Hi ${guardianName},`,
     '',
@@ -222,6 +224,12 @@ export function waiverRequestEmail(
     '',
     ...(done ? [] : [
       'Every competitor needs a signed waiver before competition day. You will be emailed a signed copy (PDF) for your records.',
+      '',
+      `Link not working? ${fallback.intro}`,
+      '',
+      `  "${fallback.statement}"`,
+      '',
+      fallback.after,
       '',
       'If you are not their parent or guardian, or you have questions, just reply to this email.',
       '',
@@ -234,9 +242,29 @@ export function waiverRequestEmail(
 ${button(link, done ? 'View the signed waiver' : 'Review and sign the waiver')}
 <p style="font-size:13px;color:#3d6377">Or copy this link: ${escapeHtml(link)}</p>
 ${done ? '' : `<p>Every competitor needs a signed waiver before competition day. You will be emailed a signed copy (PDF) for your records.</p>
+<div style="margin:16px 0;padding:10px 14px;background:#fdf8ec;border-left:4px solid #f2b52c">
+<p style="margin:0 0 6px"><strong>Link not working?</strong> ${escapeHtml(fallback.intro)}</p>
+<p style="margin:0 0 6px;font-style:italic">“${escapeHtml(fallback.statement)}”</p>
+<p style="margin:0;font-size:13px;color:#3d6377">${escapeHtml(fallback.after)}</p></div>
 <p>If you are not their parent or guardian, or you have questions, just reply to this email.</p>`}
 <p>— The San Francisco Math Initiative</p></div>`;
   return { to: to.trim(), subject, text, html };
+}
+
+/**
+ * For a parent who cannot use the signing page: what to email us instead.
+ * The waiver page says the same (src/pages/WaiverPage.tsx); staff then
+ * record it in the portal, which emails them the PDF like any signature.
+ */
+export function emailFallback(competitors: string[]) {
+  const names = competitors.length > 1
+    ? `${competitors.slice(0, -1).join(', ')} and ${competitors[competitors.length - 1]}`
+    : competitors[0] ?? 'the competitor';
+  return {
+    intro: `Reply to this email (or write to sfmathopen@gmail.com) from this address, and copy in:`,
+    statement: `I, [your full legal name], am the parent or legal guardian of ${names}. I have read the SFMO 2027 liability waiver at ${site()}waiver and I agree to it on their behalf.`,
+    after: 'A competitor who is 18 or older can write the same for themself. We will record it and email you the signed copy.',
+  };
 }
 
 /** One "please sign" email per guardian address on the team. */
@@ -381,7 +409,11 @@ async function staffEmail(req: Request): Promise<string | null> {
   return ((await staff.json()) as unknown[]).length > 0 ? user.email : null;
 }
 
-/** Opens the signing page's "link not valid" message, which is right for a test. */
+/**
+ * The waiver link in a test email. The signing page recognises it and shows
+ * a preview that saves nothing; asking for its PDF returns a marked sample.
+ * Kept in step with SAMPLE_WAIVER_TOKEN in src/lib/waiver.ts.
+ */
 const SAMPLE_TOKEN = '00000000-0000-4000-8000-000000000000';
 
 /** A made-up team, so a test email shows exactly what a real one looks like. */
@@ -449,6 +481,9 @@ export type WaiverCompetitor = {
   doc_id: string | null;
   doc_sha256: string | null;
   waiver_token: string;
+  /** 'email' when staff recorded an agreement the parent emailed us. */
+  method?: 'online' | 'email' | null;
+  recorded_by?: string | null;
 };
 
 export type WaiverRecord = {
@@ -533,7 +568,11 @@ export const pdfFilename = (c: WaiverCompetitor) =>
   }.pdf`;
 
 /** One signed waiver, laid out as a document: details, full text, signature, audit trail. */
-export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Promise<Uint8Array> {
+export async function waiverPdf(
+  record: WaiverRecord,
+  c: WaiverCompetitor,
+  { sample = false }: { sample?: boolean } = {},
+): Promise<Uint8Array> {
   if (!c.signed || !c.signed_at || !c.doc_id) throw new Error(`${c.competitor_id} has not signed`);
   // Loaded here, not at the top, so a problem with the library can only
   // affect PDFs and never the registration emails.
@@ -598,8 +637,14 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
     y -= gap;
   };
 
+  const byEmail = c.method === 'email';
+  const RED = rgb(0.75, 0.2, 0.1);
+
   // Header
-  page.drawRectangle({ x: 0, y: H - 10, width: W, height: 10, color: ACCENT });
+  page.drawRectangle({ x: 0, y: H - 10, width: W, height: 10, color: sample ? RED : ACCENT });
+  if (sample) {
+    write('SAMPLE — NOT A SIGNED WAIVER. Made from the test link in a staff test email.', { font: bold, size: 10, color: RED, gap: 8 });
+  }
   write(doc.organizer.toUpperCase(), { font: bold, size: 8.5, color: SOFT, gap: 2 });
   write(doc.title, { font: bold, size: 16, gap: 2, lead: 1.25 });
   write(`${doc.event} · ${doc.eventLine}`, { size: 9.5, color: SOFT, gap: 12 });
@@ -609,7 +654,7 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
     ['Participant', `${c.full_name} · competitor ID ${c.competitor_id}${c.grade ? ` · grade ${c.grade}` : ''}`],
     ['Team', `${record.team_code} · ${record.team_name}`],
     ['Division', record.division === 'online' ? 'Online' : record.division === 'in_person' ? `In person (${VENUE_AREA})` : '—'],
-    ['Signed by', `${c.signed_name} · ${roleLabel(c.signer_role)}`],
+    ['Signed by', `${c.signed_name} · ${roleLabel(c.signer_role)}${byEmail ? ' · by email' : ''}`],
     ['Signed on', pacific(c.signed_at)],
   ];
   const boxTop = y;
@@ -646,8 +691,11 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
   );
   page.drawLine({ start: { x: M, y: y + 1 }, end: { x: M + Math.min(signatureWidth, W - 2 * M), y: y + 1 }, thickness: 0.8, color: INK });
   y -= 6;
+  const whose = `${roleLabel(c.signer_role)}${c.signer_role === 'self' ? '' : ` of ${c.full_name}`}`;
   write(
-    `Signed electronically by ${c.signed_name}, ${roleLabel(c.signer_role)}${c.signer_role === 'self' ? '' : ` of ${c.full_name}`}, on ${pacific(c.signed_at)}.`,
+    byEmail
+      ? `Agreed by email by ${c.signed_name}, ${whose}, received ${pacific(c.signed_at)}. Recorded by SFMO staff${c.recorded_by ? ` (${c.recorded_by})` : ''}; the email is kept on file.`
+      : `Signed electronically by ${c.signed_name}, ${whose}, on ${pacific(c.signed_at)}.`,
     { size: 9, color: SOFT, gap: 14 },
   );
 
@@ -655,15 +703,20 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
   ensure(120);
   const matches = c.doc_sha256 === sha256;
   const audit: Array<[string, string]> = [
-    ['Signed at (UTC)', new Date(c.signed_at).toISOString()],
-    ['IP address', c.signed_ip ?? 'not recorded'],
-    ['Browser', (c.signed_ua ?? 'not recorded').slice(0, 160)],
+    ['Method', byEmail
+      ? `Emailed agreement, recorded by SFMO staff${c.recorded_by ? ` (${c.recorded_by})` : ''}`
+      : 'Online, through a private signing link'],
+    [byEmail ? 'Received (UTC)' : 'Signed at (UTC)', new Date(c.signed_at).toISOString()],
+    ...(byEmail ? [] : [
+      ['IP address', c.signed_ip ?? 'not recorded'],
+      ['Browser', (c.signed_ua ?? 'not recorded').slice(0, 160)],
+    ] as Array<[string, string]>),
     ['Document', `${doc.id} (published ${doc.published})`],
-    ['Fingerprint signed', `SHA-256 ${c.doc_sha256 ?? '—'}`],
+    [byEmail ? 'Fingerprint agreed' : 'Fingerprint signed', `SHA-256 ${c.doc_sha256 ?? '—'}`],
     ['Fingerprint check', matches
       ? 'Matches the published text of this document.'
       : `DOES NOT MATCH the published text (now ${sha256}). Contact ${doc.contact}.`],
-    ['Signing link', `…${c.waiver_token.slice(-8)}`],
+    ...(byEmail ? [] : [['Signing link', `…${c.waiver_token.slice(-8)}`]] as Array<[string, string]>),
     ['This PDF made', new Date().toISOString()],
   ];
   const auditTop = y;
@@ -676,7 +729,7 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
     page.drawText(label, { x: M + 10, y, size: 7.5, font: bold, color: SOFT });
     lines.forEach((line, i) => {
       if (i) y -= 11;
-      page.drawText(line, { x: M + 110, y, size: 8, font: regular, color: matches || label !== 'Fingerprint check' ? INK : rgb(0.75, 0.2, 0.1) });
+      page.drawText(line, { x: M + 110, y, size: 8, font: regular, color: matches || label !== 'Fingerprint check' ? INK : RED });
     });
   }
   y -= 8;
@@ -688,7 +741,7 @@ export async function waiverPdf(record: WaiverRecord, c: WaiverCompetitor): Prom
   const pages = pdf.getPages();
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: M, y: M - 6 }, end: { x: W - M, y: M - 6 }, thickness: 0.5, color: RULE });
-    p.drawText(clean(`SFMO 2027 · signed liability waiver · ${c.competitor_id} ${c.full_name}`), { x: M, y: M - 18, size: 7.5, font: regular, color: SOFT });
+    p.drawText(clean(`SFMO 2027 · ${sample ? 'SAMPLE, not a signed waiver' : 'signed liability waiver'} · ${c.competitor_id} ${c.full_name}`), { x: M, y: M - 18, size: 7.5, font: sample ? bold : regular, color: sample ? RED : SOFT });
     const label = `Page ${i + 1} of ${pages.length}`;
     p.drawText(label, { x: W - M - regular.widthOfTextAtSize(label, 7.5), y: M - 18, size: 7.5, font: regular, color: SOFT });
   });
@@ -718,10 +771,13 @@ export async function signedWaiverEmail(record: WaiverRecord): Promise<Message> 
     note = 'You can view your signed waiver, and download the signed PDF, at the link below.';
   }
   const subject = `Signed: SFMO 2027 waiver for ${signed.map((c) => c.full_name).join(' and ')}`;
+  const thanks = signed.every((c) => c.method === 'email')
+    ? `Thank you. We have recorded your emailed agreement to the SFMO 2027 liability waiver for ${who}, received ${when}.`
+    : `Thank you. You signed the SFMO 2027 liability waiver for ${who} on ${when}.`;
   const text = [
     `Hi ${signer},`,
     '',
-    `Thank you. You signed the SFMO 2027 liability waiver for ${who} on ${when}.`,
+    thanks,
     '',
     note,
     `View it any time: ${link}`,
@@ -731,7 +787,7 @@ export async function signedWaiverEmail(record: WaiverRecord): Promise<Message> 
   ].join('\n');
   const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#0a2b3f;max-width:560px">
 <p>Hi ${escapeHtml(signer)},</p>
-<p>Thank you. You signed the SFMO 2027 liability waiver for <strong>${escapeHtml(who)}</strong> on ${escapeHtml(when)}.</p>
+<p>${escapeHtml(thanks)}</p>
 <p>${escapeHtml(note)}</p>
 <p>View it any time: <a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>
 <p>If anything here is wrong, just reply to this email.<br>— The San Francisco Math Initiative</p></div>`;
@@ -766,6 +822,48 @@ async function waiverSigned(token: string): Promise<Response> {
   }
 }
 
+const pdfResponse = (bytes: Uint8Array, filename: string) =>
+  new Response(new Uint8Array(bytes), {
+    status: 200,
+    headers: {
+      ...CORS,
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Access-Control-Expose-Headers': 'Content-Disposition',
+    },
+  });
+
+/**
+ * The preview's "Download PDF": a sample made up on the spot, marked SAMPLE
+ * on every page, for the made-up test team. Nothing is read or written.
+ */
+export async function samplePdf(
+  competitorId: string | null,
+  options: { name?: unknown; role?: unknown; docId?: unknown } = {},
+): Promise<Response> {
+  const name = typeof options.name === 'string' ? options.name.trim().replace(/\s+/g, ' ').slice(0, 120) : '';
+  const docId = typeof options.docId === 'string' && /^[a-z0-9-]{3,80}$/.test(options.docId) ? options.docId : 'sfmo-2027-waiver-v1';
+  try {
+    const { sha256 } = await loadDoc(docId);
+    const now = new Date().toISOString();
+    const competitors: WaiverCompetitor[] = sampleClaim('').members.map((m) => ({
+      competitor_id: m.competitor_id, full_name: m.full_name, grade: m.grade,
+      signed: true, signed_name: name.length >= 2 ? name : 'Sample Parent', signed_at: now,
+      signer_role: options.role === 'self' ? 'self' : 'guardian',
+      signed_ip: '(sample)', signed_ua: '(sample — test link)', doc_id: docId, doc_sha256: sha256,
+      waiver_token: SAMPLE_TOKEN, method: 'online', recorded_by: null,
+    }));
+    const record: WaiverRecord = {
+      team_code: '00', team_name: 'Test Team (not a real registration)', division: 'in_person', status: 'pending',
+      guardian_name: competitors[0].signed_name, guardian_email: null, waiver_token: SAMPLE_TOKEN, competitors,
+    };
+    const pick = competitors.find((c) => c.competitor_id === competitorId) ?? competitors[0];
+    return pdfResponse(await waiverPdf(record, pick, { sample: true }), `SAMPLE-${pdfFilename(pick)}`);
+  } catch (error) {
+    return json(500, { error: `Could not make the sample PDF: ${String(error)}` });
+  }
+}
+
 /** The signing page's "Download PDF": the link is the key. */
 async function waiverPdfDownload(token: string, competitorId: string | null): Promise<Response> {
   let record: WaiverRecord | null;
@@ -781,16 +879,7 @@ async function waiverPdfDownload(token: string, competitorId: string | null): Pr
       record.competitors.find((c) => c.signed));
   if (!pick) return json(409, { error: 'There is no signed waiver to download yet.' });
   try {
-    const bytes = await waiverPdf(record, pick);
-    return new Response(new Uint8Array(bytes), {
-      status: 200,
-      headers: {
-        ...CORS,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${pdfFilename(pick)}"`,
-        'Access-Control-Expose-Headers': 'Content-Disposition',
-      },
-    });
+    return pdfResponse(await waiverPdf(record, pick), pdfFilename(pick));
   } catch (error) {
     return json(500, { error: `Could not make the PDF: ${String(error)}` });
   }
@@ -919,6 +1008,7 @@ export async function handle(req: Request): Promise<Response> {
   if (body.waiver_pdf !== undefined) {
     const t = token('waiver_pdf');
     const cid = typeof body.competitor_id === 'string' ? body.competitor_id : null;
+    if (t === SAMPLE_TOKEN) return samplePdf(cid, { name: body.sample_name, role: body.sample_role, docId: body.doc_id });
     return t ? waiverPdfDownload(t, cid) : json(400, { error: 'Bad waiver link.' });
   }
   if (body.resend_waiver !== undefined) {

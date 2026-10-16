@@ -9,7 +9,9 @@
  * Past editions' sponsors live with their event in src/data/archive.ts.
  */
 
-export type SponsorTier = 'gold' | 'silver' | 'bronze';
+/** A presenting sponsor is billed with the event itself ("presented by"),
+ * in the hero as well as at the top of the sponsor wall. */
+export type SponsorTier = 'presenting' | 'gold' | 'silver' | 'bronze';
 
 export type CurrentSponsor = {
   name: string;
@@ -25,15 +27,22 @@ export type CurrentSponsor = {
   plate?: { background: string; foreground: string };
 };
 
-export const TIER_ORDER: SponsorTier[] = ['gold', 'silver', 'bronze'];
+export const TIER_ORDER: SponsorTier[] = ['presenting', 'gold', 'silver', 'bronze'];
 
 export const TIER_LABEL: Record<SponsorTier, string> = {
+  presenting: 'Presenting sponsor',
   gold: 'Gold sponsors',
   silver: 'Silver sponsors',
   bronze: 'Bronze sponsors',
 };
 
 export const sfmo2027Sponsors: CurrentSponsor[] = [
+  {
+    name: 'X-Camp Academy',
+    tier: 'presenting',
+    url: 'https://x-camp.academy/',
+    logo: 'xcamp.webp',
+  },
   {
     name: 'PiMath',
     tier: 'gold',
@@ -95,3 +104,6 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     logo: 'mehtaplus.png',
   },
 ];
+
+/** The presenting sponsor, if there is one, for the "presented by" credit. */
+export const presentingSponsor = sfmo2027Sponsors.find((sponsor) => sponsor.tier === 'presenting');

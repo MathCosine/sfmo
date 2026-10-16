@@ -69,8 +69,43 @@
   color: var(--lagoon-deep);
 }
 
+.hero__presented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.7rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.hero__presented-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.hero__presented-plate {
+  display: inline-flex;
+  padding: 0.4rem 0.65rem;
+  background: var(--logo-plate);
+  border: var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hero__presented:hover .hero__presented-plate {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+
+.hero__presented-plate img {
+  width: auto;
+  height: 26px;
+}
+
 .hero__where {
-  margin-top: 0.35rem;
+  margin-top: 0.7rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   letter-spacing: 0.02em;
@@ -1783,6 +1818,11 @@
   text-transform: uppercase;
 }
 
+.sponsor-tier__label--presenting {
+  color: var(--on-fill);
+  background: var(--btn-deep-bg);
+}
+
 .sponsor-tier__label--gold {
   background: var(--tier-gold);
 }
@@ -1810,6 +1850,12 @@
 .sponsor-grid > * {
   flex: 0 1 var(--card-w);
   min-width: 0;
+}
+
+.sponsor-grid--presenting {
+  --logo-h: 150px;
+  --logo-w: 520px;
+  --card-w: 100%;
 }
 
 .sponsor-grid--gold {
@@ -1889,6 +1935,11 @@
 
 /* A tier stripe across the top of the plate, so the tier survives a
    screenshot that crops the label off. */
+.sponsor-card--presenting .sponsor-card__plate {
+  padding-block: 2rem;
+  border-top: 8px solid var(--btn-deep-bg);
+}
+
 .sponsor-card--gold .sponsor-card__plate {
   border-top: 6px solid var(--tier-gold);
 }

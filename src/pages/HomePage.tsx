@@ -9,6 +9,7 @@ import { Portrait } from '../components/Portrait';
 import { SeoHead } from '../components/SeoHead';
 import { SponsorWall } from '../components/SponsorWall';
 import { pastEvents } from '../data/archive';
+import { presentingSponsor } from '../data/sponsors';
 import { communityStats, competitions, participantCountryWord } from '../data/competitions';
 import { staff } from '../data/staff';
 import { asset } from '../lib/asset';
@@ -144,6 +145,26 @@ export function HomePage() {
             <p className="hero__date pixel">
               <time dateTime={sfmo2027.date}>{sfmo2027.dateLabel}</time>
             </p>
+            {presentingSponsor && (
+              <a
+                className="hero__presented"
+                href={presentingSponsor.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="hero__presented-label label">Presented by</span>
+                {/* On its own light plate: the wordmark is dark grey, drawn
+                    for a light ground, and would vanish in the night theme. */}
+                <span className="hero__presented-plate">
+                  <img
+                    src={asset(`sponsors/${presentingSponsor.logo}`)}
+                    alt={presentingSponsor.name}
+                    width={1100}
+                    height={322}
+                  />
+                </span>
+              </a>
+            )}
             <p className="hero__where">
               For {sfmo2027.eligibility.toLowerCase()} · In person in the {sfmo2027.venueArea} ·
               Online division · Teams of up to {sfmo2027.maxTeamSize}

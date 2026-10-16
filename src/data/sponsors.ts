@@ -41,12 +41,6 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     logo: 'pimath.png',
   },
   {
-    name: 'National Math Camps',
-    tier: 'gold',
-    url: 'https://nationalmathcamps.org/',
-    logo: 'nationalmathcamps.png',
-  },
-  {
     name: 'AwesomeMath',
     tier: 'silver',
     url: 'https://www.awesomemath.org/',
@@ -75,6 +69,12 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     tier: 'silver',
     url: 'https://riseglobaleducation.com/',
     logo: 'rise.png',
+  },
+  {
+    name: 'National Math Camps',
+    tier: 'silver',
+    url: 'https://nationalmathcamps.org/',
+    logo: 'nationalmathcamps.png',
   },
   {
     name: 'Art of Problem Solving',

@@ -1830,6 +1830,12 @@
   --card-w: calc((100% - 2 * var(--gap)) / 3);
 }
 
+/* One gold sponsor spans the row; two or more share it, side by side, and
+   stay the largest cards on the page. */
+.sponsor-grid--gold > :not(:only-child) {
+  flex-basis: calc((100% - var(--gap)) / 2);
+}
+
 @media (max-width: 860px) {
   .sponsor-grid--bronze {
     --card-w: calc((100% - var(--gap)) / 2);
@@ -1840,6 +1846,10 @@
   .sponsor-grid--silver,
   .sponsor-grid--bronze {
     --card-w: 100%;
+  }
+
+  .sponsor-grid--gold > :not(:only-child) {
+    flex-basis: 100%;
   }
 }
 

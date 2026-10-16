@@ -103,7 +103,7 @@ const EXPLORE: Array<{ to: string; icon: PixelIconName; eyebrow: string; title: 
     icon: 'people',
     eyebrow: 'The crew',
     title: 'Meet the Team',
-    body: 'Eight organizers, problem writers and volunteers. Every one of them is a student.',
+    body: `The ${numberWord(staff.length)} students who run SFMI.`,
   },
 ];
 
@@ -149,8 +149,9 @@ export function HomePage() {
               Online division · Teams of up to {sfmo2027.maxTeamSize}
             </p>
             <p className="hero__blurb">
-              Our flagship competition comes home. One day in the Bay Area, and a set of problems
-              written by students who still remember what it feels like to sit the contest.
+              Our flagship competition comes home: one day in the Bay Area,{' '}
+              {numberWord(rounds.length)} rounds, and a set of problems worth puzzling over with
+              your team.
             </p>
             <div className="btn-row hero__actions">
               <Link to="/register" className="btn btn--primary btn--lg">

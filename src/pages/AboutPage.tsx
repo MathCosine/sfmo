@@ -21,9 +21,9 @@ const principles = (
     body: 'Every contest we have run has been free to enter. Cost should never be the reason a student does not sit a competition, so prizes are funded by our sponsors and our Academy instead of entry fees.',
   },
   {
-    title: 'Written by students',
-    icon: 'doc',
-    body: 'Our problem writers are in high school right now. They remember which hints actually help and which problems only look clever, and it shows in the problem sets.',
+    title: 'Run by students',
+    icon: 'people',
+    body: 'SFMI is organized by students who compete themselves. We know what makes a contest day go well, and we plan every part of it around the people taking part.',
   },
   {
     title: 'Open to anywhere',

@@ -64,7 +64,7 @@ const WHAT_WE_ASK: IconItem[] = [
   {
     icon: 'idcard',
     title: 'Competitors',
-    body: `Up to ${sfmo2027.maxTeamSize} — name, grade and email for each. On your own? You can register solo and we can place you with others.`,
+    body: `Up to ${sfmo2027.maxTeamSize} middle or high schoolers — name, grade and email for each. On your own? You can register solo and we can place you with others.`,
   },
   {
     icon: 'shield',
@@ -1112,7 +1112,7 @@ export function RegisterPage() {
     <>
       <SeoHead
         title="Register — SFMO 2027"
-        description="Team registration for the San Francisco Math Open 2027. Teams of up to four. Registration opens October 24, 2026."
+        description="Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Registration opens October 24, 2026."
       />
 
       <section className="page-head page-head--reg">
@@ -1126,7 +1126,8 @@ export function RegisterPage() {
           <p className="eyebrow">SFMO 2027</p>
           <h1>Register a Team</h1>
           <p className="lede">
-            Teams of up to {sfmo2027.maxTeamSize}, free to enter — in person in the{' '}
+            Teams of up to {sfmo2027.maxTeamSize} {sfmo2027.eligibility.toLowerCase()}, free to
+            enter — in person in the{' '}
             {sfmo2027.venueArea}, or
             online if your team lives more than {IN_PERSON_RADIUS_MILES} miles from the Bay Area. Every
             competitor gets an ID the moment you register.

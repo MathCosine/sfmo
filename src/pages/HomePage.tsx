@@ -50,8 +50,8 @@ const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail:
   {
     icon: 'people',
     label: 'Who',
-    value: 'Any student',
-    detail: `No qualification needed · teams of up to ${sfmo2027.maxTeamSize}`,
+    value: sfmo2027.eligibility,
+    detail: `Eligible to compete, no qualification needed · teams of up to ${sfmo2027.maxTeamSize}`,
   },
   {
     icon: 'star',
@@ -112,7 +112,7 @@ export function HomePage() {
     <>
       <SeoHead
         title="SFMO 2027 — San Francisco Math Open"
-        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for students, run by students."
+        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for middle and high schoolers, run by students."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -145,8 +145,8 @@ export function HomePage() {
               <time dateTime={sfmo2027.date}>{sfmo2027.dateLabel}</time>
             </p>
             <p className="hero__where">
-              In person in the {sfmo2027.venueArea} · Online division · Teams of up to{' '}
-              {sfmo2027.maxTeamSize}
+              For {sfmo2027.eligibility.toLowerCase()} · In person in the {sfmo2027.venueArea} ·
+              Online division · Teams of up to {sfmo2027.maxTeamSize}
             </p>
             <p className="hero__blurb">
               Our flagship competition comes home. One day in the Bay Area, and a set of problems
@@ -285,8 +285,7 @@ export function HomePage() {
                 ))}
               </span>
               <span className="crew-strip__caption">
-                {capitalise(numberWord(staff.length))} students write the problems, run the day
-                and build the platform.
+                Run by {numberWord(staff.length)} students.
               </span>
               <span className="crew-strip__more label">
                 Meet the team <ArrowIcon />

@@ -71,6 +71,8 @@ export const sfmo2027 = {
   registrationOpensLabel: 'October 24, 2026',
   maxTeamSize: 4,
   minTeamSize: 1,
+  /** Who may compete; there is no qualifying exam. */
+  eligibility: 'Middle and high schoolers',
 } as const;
 
 export type Round = {
@@ -217,7 +219,7 @@ export const faq = [
   },
   {
     q: 'Who can compete?',
-    a: 'Any student who wants to — there is no qualification requirement. Where you live decides only your division: within 100 miles of the Bay Area you compete in person, and teams farther away can compete online.',
+    a: 'Middle and high school students are eligible, and there is no qualification requirement. Where you live decides only your division: within 100 miles of the Bay Area you compete in person, and teams farther away can compete online.',
   },
   {
     q: 'What should we bring?',

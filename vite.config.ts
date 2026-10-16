@@ -42,14 +42,14 @@ const ROUTES: RouteMeta[] = [
     path: '',
     title: 'SFMO 2027 — San Francisco Math Open',
     description:
-      'The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for students, run by students.',
+      'The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for middle and high schoolers, run by students.',
     priority: '1.0',
   },
   {
     path: 'register',
     title: 'Register — SFMO 2027',
     description:
-      'Team registration for the San Francisco Math Open 2027. Teams of up to four. Registration opens October 24, 2026.',
+      'Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Registration opens October 24, 2026.',
     priority: '0.9',
   },
   {

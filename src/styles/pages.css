@@ -1907,6 +1907,11 @@
 }
 
 @media (max-width: 860px) {
+  /* Once silver is two to a row, gold sponsors stack, so they stay wider. */
+  .sponsor-grid--gold > :not(:only-child) {
+    flex-basis: var(--card-w);
+  }
+
   .sponsor-grid--silver {
     --card-w: calc((100% - var(--gap)) / 2);
   }

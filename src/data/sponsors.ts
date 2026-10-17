@@ -50,6 +50,12 @@ export const sfmo2027Sponsors: CurrentSponsor[] = [
     logo: 'pimath.png',
   },
   {
+    name: 'Jane Street',
+    tier: 'gold',
+    url: 'https://www.janestreet.com/',
+    logo: 'janestreet.svg',
+  },
+  {
     name: 'AwesomeMath',
     tier: 'silver',
     url: 'https://www.awesomemath.org/',

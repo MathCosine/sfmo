@@ -65,7 +65,7 @@ export function SponsorWall() {
   return (
     <section className="section sponsors-wall" aria-labelledby="sponsors-heading">
       <div className="wrap">
-        <div className="section-head">
+        <div className="section-head section-head--center">
           <p className="eyebrow">Made possible by</p>
           <h2 id="sponsors-heading">SFMO 2027 Sponsors</h2>
           <p className="lede">

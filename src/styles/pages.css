@@ -104,6 +104,37 @@
   height: 26px;
 }
 
+.hero__prizes {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 0.8rem;
+  padding: 0.4rem 0.8rem 0.4rem 0.55rem;
+  font-family: var(--font-label);
+  font-size: 0.9rem;
+  color: var(--on-sub);
+  background: var(--sub);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* The trophy is drawn on the yellow badge, so its own yellow would vanish. */
+.hero__prizes .px-icon {
+  --px-accent: #fff6d6;
+  color: var(--on-sub);
+}
+
+.hero__prizes strong {
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.hero__presented + .hero__prizes {
+  display: flex;
+  width: fit-content;
+}
+
 .hero__where {
   margin-top: 0.7rem;
   font-family: var(--font-mono);

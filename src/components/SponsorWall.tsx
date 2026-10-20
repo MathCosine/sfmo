@@ -6,7 +6,7 @@ import {
   type CurrentSponsor,
 } from '../data/sponsors';
 import { asset } from '../lib/asset';
-import { links } from '../lib/config';
+import { links, sfmo2027 } from '../lib/config';
 import { ExternalIcon } from './Icons';
 
 function SponsorCard({ sponsor }: { sponsor: CurrentSponsor }) {
@@ -69,7 +69,8 @@ export function SponsorWall() {
           <p className="eyebrow">Made possible by</p>
           <h2 id="sponsors-heading">SFMO 2027 Sponsors</h2>
           <p className="lede">
-            Entry is free because these organisations help fund the prizes. Thank you.
+            Entry is free, and these organisations help fund {sfmo2027.prizePool} in prizes, and
+            counting. Thank you.
           </p>
         </div>
 

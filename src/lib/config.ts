@@ -73,6 +73,9 @@ export const sfmo2027 = {
   minTeamSize: 1,
   /** Who may compete; there is no qualifying exam. */
   eligibility: 'Middle and high schoolers',
+  /** The prize pool so far, sponsored prizes included. Shown in the hero,
+   *  the at-a-glance sheet and the sponsor wall. */
+  prizePool: '$20,000+',
 } as const;
 
 export type Round = {

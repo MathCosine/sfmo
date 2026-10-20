@@ -67,6 +67,12 @@ const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail:
     detail: 'A donation is suggested at registration, and it is completely optional',
   },
   {
+    icon: 'trophy',
+    label: 'Prizes',
+    value: sfmo2027.prizePool,
+    detail: 'In prizes, and counting',
+  },
+  {
     icon: 'idcard',
     label: 'Registration',
     value: `Opens ${sfmo2027.registrationOpensLabel}`,
@@ -113,7 +119,7 @@ export function HomePage() {
     <>
       <SeoHead
         title="SFMO 2027 — San Francisco Math Open"
-        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for middle and high schoolers, run by students."
+        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for middle and high schoolers, run by students, with $20,000+ in prizes and counting."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -165,6 +171,12 @@ export function HomePage() {
                 </span>
               </a>
             )}
+            <p className="hero__prizes">
+              <PixelIcon name="trophy" size={22} />
+              <span>
+                <strong>{sfmo2027.prizePool}</strong> in prizes and counting
+              </span>
+            </p>
             <p className="hero__where">
               For {sfmo2027.eligibility.toLowerCase()} · In person in the {sfmo2027.venueArea} ·
               Online division · Teams of up to {sfmo2027.maxTeamSize}

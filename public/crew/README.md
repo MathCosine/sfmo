@@ -14,6 +14,7 @@ card shows a pixel monogram instead of a broken image.
 | `rylan.jpg`     | Rylan Zhang           |
 | `temujin.jpg`   | Temujin Battulga      |
 | `william.jpg`   | William Tao           |
+| `yakup.jpg`     | Yakup Pala            |
 
 ## After adding photos, run this
 

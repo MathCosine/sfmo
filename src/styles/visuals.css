@@ -566,16 +566,19 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* One row, however many of us there are: the faces shrink a little to fit
+   rather than leaving one stranded on a second line. */
 .crew-strip__faces {
   display: flex;
-  flex-wrap: wrap;
-  row-gap: 6px;
+  flex-wrap: nowrap;
   padding-left: 12px;
 }
 
 .crew-strip__face {
-  width: 58px;
-  height: 58px;
+  flex: 0 1 58px;
+  min-width: 30px;
+  height: auto;
+  aspect-ratio: 1;
   margin-left: -12px;
   overflow: hidden;
   background: var(--shallow);
@@ -590,8 +593,7 @@
 
 @media (max-width: 520px) {
   .crew-strip__face {
-    width: 44px;
-    height: 44px;
+    flex-basis: 44px;
     margin-left: -10px;
   }
 }

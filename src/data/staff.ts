@@ -77,6 +77,15 @@ export const staff: StaffMember[] = [
     bio: "Temujin Battulga is a combinatorics main, a certified geo hater, and part of the Gunn High School graduating class of 2030. He also codes in C++, which he describes to be, 'the best language, no room for discussion'. When not doing math or coding (which is basically all the time), you'll find him laddering on Pokémon Showdown, playing piano, and being chronically online. We are not joking about the chronically online part, DM him and he will probably respond within a minute or two (this has been tested and verified).",
   },
   {
+    slug: 'yakup',
+    name: 'Yakup Pala',
+    boardTitle: 'Operations Manager',
+    roles: ['Operations Manager', 'Problem Writer'],
+    isBoard: true,
+    photoPosition: '50% 22%',
+    bio: "Yakup Pala is a sophomore at Connecting Waters Charter School in the Bay Area. He believes C>N=A>G, and that olympiad is superior to computational. Outside of math, Yakup enjoys robotics, taekwondo, and competitive programming. If you see him, ask him which combo problem he's thinking about; there's always at least one.",
+  },
+  {
     slug: 'william',
     name: 'William Tao',
     boardTitle: 'Problem Writer',
@@ -84,15 +93,6 @@ export const staff: StaffMember[] = [
     isBoard: false,
     photoPosition: '50% 20%',
     bio: "William qualified for MathCounts Nationals out of California — a sentence that tells you most of what you need to know about his problem-solving instincts. He has a particular fondness for combinatorics, which he approaches with genuine creativity and, when the situation calls for it, a willingness to casework his way through every possible configuration. He calls this 'thorough.' We call it 'a William problem.' Both are accurate. The answers come out right, and that's what counts.",
-  },
-  {
-    slug: 'yakup',
-    name: 'Yakup Pala',
-    boardTitle: 'Problem Writer',
-    roles: ['Problem Writer'],
-    isBoard: false,
-    photoPosition: '50% 22%',
-    bio: "Yakup Pala is a sophomore at Connecting Waters Charter School in the Bay Area. He believes C>N=A>G, and that olympiad is superior to computational. Outside of math, Yakup enjoys robotics, taekwondo, and competitive programming. If you see him, ask him which combo problem he's thinking about; there's always at least one.",
   },
 ];
 

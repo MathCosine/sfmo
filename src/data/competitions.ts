@@ -20,7 +20,7 @@ export const competitions: Competition[] = [
     kind: 'Flagship',
     dateLabel: 'January 16, 2027',
     status: 'upcoming',
-    blurb: 'Our flagship competition returns in person on Saturday, January 16, 2027, in the South Bay / San Francisco.',
+    blurb: 'Our flagship competition returns in person on Saturday, January 16, 2027, at the Bliss and Wisdom Foundation in San Jose.',
   },
   {
     code: 'SFM3',

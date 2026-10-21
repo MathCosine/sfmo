@@ -35,7 +35,13 @@ const dayEnds = publicDay[publicDay.length - 1];
 const describedRounds = rounds.filter((round) => !round.mystery).length;
 
 /** The essentials, all derived from config so they never drift from it. */
-const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail: string }> = [
+const GLANCE: Array<{
+  icon: PixelIconName;
+  label: string;
+  value: string;
+  detail: string;
+  link?: { href: string; label: string };
+}> = [
   {
     icon: 'clock',
     label: 'When',
@@ -45,8 +51,9 @@ const GLANCE: Array<{ icon: PixelIconName; label: string; value: string; detail:
   {
     icon: 'pin',
     label: 'Where',
-    value: sfmo2027.venueArea,
-    detail: `Venue being finalised · online division for teams ${IN_PERSON_RADIUS_MILES}+ miles away`,
+    value: sfmo2027.venue.name,
+    detail: `${sfmo2027.venue.street}, ${sfmo2027.venue.cityLine} · online division for teams ${IN_PERSON_RADIUS_MILES}+ miles away`,
+    link: { href: sfmo2027.venue.mapsUrl, label: 'Get directions' },
   },
   {
     icon: 'people',
@@ -119,7 +126,7 @@ export function HomePage() {
     <>
       <SeoHead
         title="SFMO 2027 — San Francisco Math Open"
-        description="The San Francisco Math Open returns in person on January 16, 2027, in the South Bay / San Francisco. A free math competition for middle and high schoolers, run by students, with $20,000+ in prizes and counting."
+        description="The San Francisco Math Open returns in person on January 16, 2027, in San Jose. A free math competition for middle and high schoolers, run by students, with $20,000+ in prizes and counting."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -178,7 +185,7 @@ export function HomePage() {
               </span>
             </p>
             <p className="hero__where">
-              For {sfmo2027.eligibility.toLowerCase()} · In person in the {sfmo2027.venueArea} ·
+              For {sfmo2027.eligibility.toLowerCase()} · In person in {sfmo2027.venueArea} ·
               Online division · Teams of up to {sfmo2027.maxTeamSize}
             </p>
             <p className="hero__blurb">
@@ -250,6 +257,16 @@ export function HomePage() {
                   <dd>
                     <strong>{row.value}</strong>
                     <span>{row.detail}</span>
+                    {row.link && (
+                      <a
+                        className="glance-sheet__link"
+                        href={row.link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {row.link.label} <ExternalIcon />
+                      </a>
+                    )}
                   </dd>
                 </div>
               ))}
@@ -261,7 +278,12 @@ export function HomePage() {
                 <div>
                   <p className="card__eyebrow">{DIVISIONS.in_person.label}</p>
                   <h3 className="card__title">{sfmo2027.venueArea}</h3>
-                  <p className="card__body">The main event. The venue is still being finalised.</p>
+                  <p className="card__body">
+                    The main event, at the {sfmo2027.venue.name}, {sfmo2027.venue.street}.{' '}
+                    <a href={sfmo2027.venue.mapsUrl} target="_blank" rel="noreferrer">
+                      Get directions
+                    </a>
+                  </p>
                   <p className="division-card__tag label">
                     Within {IN_PERSON_RADIUS_MILES} mi of the Bay Area
                   </p>
@@ -373,7 +395,7 @@ export function HomePage() {
                   {sfmo2027.dateLabel} · {sfmo2027.venueArea} + online
                 </span>
                 <span className="track__teaser">
-                  In person in the {sfmo2027.venueArea}, with an online division. Registration
+                  In person in {sfmo2027.venueArea}, with an online division. Registration
                   opens{' '}
                   {sfmo2027.registrationOpensLabel}.
                 </span>
@@ -472,7 +494,7 @@ export function HomePage() {
             <p className="deep-band__note">
               {sfmo2027.dayLabel}: doors at {clock(doorsOpen.start)}, done by{' '}
               {clock(dayEnds.end)}.
-              Exact times land once the venue is confirmed — this is the shape of it.
+              Exact times are announced when registration opens — this is the shape of it.
             </p>
           </div>
           <ol className="daylog">

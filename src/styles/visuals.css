@@ -1343,3 +1343,15 @@
   text-transform: uppercase;
   color: var(--lagoon-deep);
 }
+
+/* At a glance · "Get directions" under the venue */
+.glance-sheet__link {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.2rem;
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  font-weight: 500;
+}

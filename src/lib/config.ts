@@ -63,10 +63,19 @@ export const sfmo2027 = {
   date: '2027-01-16',
   dateLabel: 'January 16, 2027',
   dayLabel: 'Saturday, January 16, 2027',
-  /** Where the in-person event will be; the exact venue is still being finalised.
-   *  The confirmation email repeats it (send-confirmation). */
-  venueArea: 'South Bay / San Francisco',
-  locationLabel: 'In person · South Bay / San Francisco',
+  /** The in-person venue. The confirmation email and the waiver PDF repeat
+   *  it (send-confirmation) — change both together. */
+  venue: {
+    name: 'Bliss and Wisdom Foundation of Northern California',
+    street: '1338 Ridder Park Dr',
+    city: 'San Jose',
+    cityLine: 'San Jose, CA 95131',
+    mapsUrl:
+      'https://www.google.com/maps/search/?api=1&query=Bliss%20and%20Wisdom%20Foundation%20of%20Northern%20California%2C%201338%20Ridder%20Park%20Dr%2C%20San%20Jose%2C%20CA%2095131',
+  },
+  /** The city, for running text ("in person in San Jose"). */
+  venueArea: 'San Jose',
+  locationLabel: 'In person · San Jose',
   registrationOpensAt: '2026-10-24T00:00:00-07:00',
   registrationOpensLabel: 'October 24, 2026',
   maxTeamSize: 4,
@@ -234,7 +243,7 @@ export const faq = [
   },
   {
     q: 'When and where is it?',
-    a: 'Saturday, January 16, 2027, in the South Bay / San Francisco, finishing in the early afternoon. The exact venue is still being finalised, and we will announce it as soon as it is confirmed.',
+    a: 'Saturday, January 16, 2027, at the Bliss and Wisdom Foundation of Northern California, 1338 Ridder Park Dr, San Jose, CA 95131, finishing in the early afternoon. Teams farther than 100 miles away compete online the same day.',
   },
   {
     q: 'How do the competitor IDs work?',
@@ -249,7 +258,7 @@ export const faq = [
 export const DIVISIONS = {
   in_person: {
     label: 'In person',
-    detail: 'South Bay / San Francisco · venue still being finalised',
+    detail: 'Bliss and Wisdom Foundation, San Jose',
   },
   online: {
     label: 'Online',

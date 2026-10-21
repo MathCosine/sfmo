@@ -47,7 +47,9 @@
 // Mirrors `donation` in src/lib/config.ts — change both together.
 const PER_COMPETITOR = 10;
 const EVENT_DATE = 'Saturday, January 16, 2027'; // sfmo2027.dayLabel
-const VENUE_AREA = 'South Bay / San Francisco'; // sfmo2027.venueArea
+// sfmo2027.venue in src/lib/config.ts
+const VENUE = 'Bliss and Wisdom Foundation of Northern California, 1338 Ridder Park Dr, San Jose, CA 95131';
+const VENUE_SHORT = 'Bliss and Wisdom Foundation, San Jose';
 const ZELLE = '(925) 997-8182';
 const DONATE_URL = 'https://sfmathacademy.com/donate';
 const DEFAULT_SITE = 'https://sfmathopen.org/';
@@ -125,7 +127,7 @@ async function release(teamCode: string) {
 }
 
 const divisionLabel = (d: Claim['division']) =>
-  d === 'online' ? 'Online' : d === 'in_person' ? `In person (${VENUE_AREA} — venue still being finalised)` : '—';
+  d === 'online' ? 'Online' : d === 'in_person' ? `In person, at ${VENUE}` : '—';
 
 function donation(c: Claim) {
   const memo = `SFMO 2027 Team ${c.team_code}`;
@@ -653,7 +655,7 @@ export async function waiverPdf(
   const facts: Array<[string, string]> = [
     ['Participant', `${c.full_name} · competitor ID ${c.competitor_id}${c.grade ? ` · grade ${c.grade}` : ''}`],
     ['Team', `${record.team_code} · ${record.team_name}`],
-    ['Division', record.division === 'online' ? 'Online' : record.division === 'in_person' ? `In person (${VENUE_AREA})` : '—'],
+    ['Division', record.division === 'online' ? 'Online' : record.division === 'in_person' ? `In person (${VENUE_SHORT})` : '—'],
     ['Signed by', `${c.signed_name} · ${roleLabel(c.signer_role)}${byEmail ? ' · by email' : ''}`],
     ['Signed on', pacific(c.signed_at)],
   ];

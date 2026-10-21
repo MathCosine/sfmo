@@ -317,7 +317,15 @@ function Receipt({ receipt, email }: { receipt: TeamReceipt; email?: EmailState 
         {receipt.division && (
           <>
             Division: <strong>{DIVISIONS[receipt.division].label}</strong>
-            {receipt.division === 'in_person' && ' (venue still being finalised)'}
+            {receipt.division === 'in_person' && (
+              <>
+                {' '}
+                at{' '}
+                <a href={sfmo2027.venue.mapsUrl} target="_blank" rel="noreferrer">
+                  {sfmo2027.venue.name}, {sfmo2027.venue.street}, {sfmo2027.venue.cityLine}
+                </a>
+              </>
+            )}
             {' · '}
           </>
         )}
@@ -1127,7 +1135,7 @@ export function RegisterPage() {
           <h1>Register a Team</h1>
           <p className="lede">
             Teams of up to {sfmo2027.maxTeamSize} {sfmo2027.eligibility.toLowerCase()}, free to
-            enter — in person in the{' '}
+            enter — in person in{' '}
             {sfmo2027.venueArea}, or
             online if your team lives more than {IN_PERSON_RADIUS_MILES} miles from the Bay Area. Every
             competitor gets an ID the moment you register.

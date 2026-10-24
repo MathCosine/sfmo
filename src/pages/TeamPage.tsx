@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Portrait } from '../components/Portrait';
 import { SeoHead } from '../components/SeoHead';
-import { boardMembers, contributors, type StaffMember } from '../data/staff';
+import { alumni, boardMembers, contributors, type StaffMember } from '../data/staff';
 import { links } from '../lib/config';
 
 function StaffCard({ member }: { member: StaffMember }) {
@@ -89,6 +89,23 @@ export function TeamPage() {
             </div>
             <div className="crew-grid">
               {contributors.map((member) => (
+                <StaffCard member={member} key={member.slug} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {alumni.length > 0 && (
+        <section className="section section--tight">
+          <div className="wrap">
+            <div className="section-head">
+              <p className="eyebrow">Alumni</p>
+              <h2>Former crew</h2>
+              <p className="lede">No longer on the team, still part of the story.</p>
+            </div>
+            <div className="crew-grid">
+              {alumni.map((member) => (
                 <StaffCard member={member} key={member.slug} />
               ))}
             </div>

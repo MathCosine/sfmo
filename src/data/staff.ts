@@ -85,14 +85,18 @@ export const staff: StaffMember[] = [
     photoPosition: '50% 22%',
     bio: "Yakup Pala is a sophomore at Connecting Waters Charter School in the Bay Area. He believes C>N=A>G, and that olympiad is superior to computational. Outside of math, Yakup enjoys robotics, taekwondo, and competitive programming. If you see him, ask him which combo problem he's thinking about; there's always at least one.",
   },
+];
+
+/** Past members: shown on the Team page, not counted in the team. */
+export const alumni: StaffMember[] = [
   {
     slug: 'william',
     name: 'William Tao',
-    boardTitle: 'Problem Writer',
-    roles: ['Problem Writer', 'MathCounts National Qualifier', 'Quality Control'],
+    boardTitle: 'Alumnus',
+    roles: ['Former Problem Writer', 'MathCounts National Qualifier'],
     isBoard: false,
     photoPosition: '50% 20%',
-    bio: "William qualified for MathCounts Nationals out of California — a sentence that tells you most of what you need to know about his problem-solving instincts. He has a particular fondness for combinatorics, which he approaches with genuine creativity and, when the situation calls for it, a willingness to casework his way through every possible configuration. He calls this 'thorough.' We call it 'a William problem.' Both are accurate. The answers come out right, and that's what counts.",
+    bio: "William qualified for MathCounts Nationals out of California and spent his time with us caseworking his way through every combinatorics problem we handed him. He has since been promoted to alumnus: a role with no meetings, no deadlines and no problems to write, effective immediately. We're told it was mutual. His desk has been left exactly as he left it, which is to say covered in casework, and the door is always open. Mostly.",
   },
 ];
 

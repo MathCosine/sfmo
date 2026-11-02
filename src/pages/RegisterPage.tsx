@@ -1120,7 +1120,7 @@ export function RegisterPage() {
     <>
       <SeoHead
         title="Register — SFMO 2027"
-        description="Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Registration opens October 24, 2026."
+        description="Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Free to enter, and registration is open."
       />
 
       <section className="page-head page-head--reg">

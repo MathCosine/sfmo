@@ -49,7 +49,7 @@ const ROUTES: RouteMeta[] = [
     path: 'register',
     title: 'Register — SFMO 2027',
     description:
-      'Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Registration opens October 24, 2026.',
+      'Team registration for the San Francisco Math Open 2027. Teams of up to four middle and high schoolers. Free to enter, and registration is open.',
     priority: '0.9',
   },
   {

@@ -14,6 +14,7 @@ import { communityStats, competitions, participantCountryWord } from '../data/co
 import { staff } from '../data/staff';
 import { asset } from '../lib/asset';
 import {
+  registrationHasOpened,
   DIVISIONS,
   IN_PERSON_RADIUS_MILES,
   SLOT_LETTERS,
@@ -82,8 +83,10 @@ const GLANCE: Array<{
   {
     icon: 'idcard',
     label: 'Registration',
-    value: `Opens ${sfmo2027.registrationOpensLabel}`,
-    detail: 'Every competitor gets an ID the moment you register',
+    value: registrationHasOpened() ? 'Open now' : `Opens ${sfmo2027.registrationOpensLabel}`,
+    detail: registrationHasOpened()
+      ? 'Takes a few minutes · every competitor gets an ID the moment you register'
+      : 'Every competitor gets an ID the moment you register',
   },
 ];
 
@@ -223,17 +226,30 @@ export function HomePage() {
         <div className="wrap status-band__inner">
           <div>
             <p className="eyebrow">Registration</p>
-            <h2 className="status-band__title">Opens {sfmo2027.registrationOpensLabel}</h2>
-            <p className="status-band__body">
-              Team registration and the full competition details go live at 12:00 AM Pacific. Join
-              the Discord and we will ping you the moment it opens.
-            </p>
+            {registrationHasOpened() ? (
+              <>
+                <h2 className="status-band__title">Registration is open</h2>
+                <p className="status-band__body">
+                  Free to enter, for teams of up to {sfmo2027.maxTeamSize} — or sign up on your own
+                  and we can place you with others. It takes a few minutes, and every competitor
+                  gets an ID the moment you register.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="status-band__title">Opens {sfmo2027.registrationOpensLabel}</h2>
+                <p className="status-band__body">
+                  Team registration and the full competition details go live at 12:00 AM Pacific.
+                  Join the Discord and we will ping you the moment it opens.
+                </p>
+              </>
+            )}
           </div>
           <Countdown
             target={sfmo2027.registrationOpensAt}
             fallback={
               <Link to="/register" className="btn btn--primary btn--lg">
-                Registration is open <ArrowIcon />
+                Register now <ArrowIcon />
               </Link>
             }
           />
@@ -395,9 +411,10 @@ export function HomePage() {
                   {sfmo2027.dateLabel} · {sfmo2027.venueArea} + online
                 </span>
                 <span className="track__teaser">
-                  In person in {sfmo2027.venueArea}, with an online division. Registration
-                  opens{' '}
-                  {sfmo2027.registrationOpensLabel}.
+                  In person in {sfmo2027.venueArea}, with an online division.{' '}
+                  {registrationHasOpened()
+                    ? 'Registration is open.'
+                    : `Registration opens ${sfmo2027.registrationOpensLabel}.`}
                 </span>
                 <span className="track__next label">
                   Next up <ArrowIcon />

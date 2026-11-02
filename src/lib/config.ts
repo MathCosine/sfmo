@@ -87,6 +87,15 @@ export const sfmo2027 = {
   prizePool: '$20,000+',
 } as const;
 
+/**
+ * True once the published opening time has passed. The landing page uses it
+ * to stop counting down; the registration form still asks the database,
+ * which has the final say (staff can close registration at any time).
+ */
+export function registrationHasOpened(now = new Date()) {
+  return now >= new Date(sfmo2027.registrationOpensAt);
+}
+
 export type Round = {
   code: string;
   name: string;

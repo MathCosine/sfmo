@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { PixelIcon } from '../components/PixelIcon';
 import { SeoHead } from '../components/SeoHead';
@@ -523,6 +523,15 @@ function Dashboard({ session }: { session: Session }) {
   const [mergeTarget, setMergeTarget] = useState('');
   /** Competitor ID whose "Got it by email" form is open. */
   const [emailedFor, setEmailedFor] = useState<string | null>(null);
+  /** Only admins may delete a team (the database enforces it too). */
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  /** Progress of "Email waiver reminders", e.g. "4/12". */
+  const [reminding, setReminding] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase?.rpc('is_admin').then(({ data }) => setIsAdmin(data === true));
+  }, []);
   const [merging, setMerging] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -730,6 +739,56 @@ function Dashboard({ session }: { session: Session }) {
     void load();
   }
 
+  /**
+   * Deletes a team and its competitors for good. Admins only: row level
+   * security silently skips the delete for anyone else, so the deleted rows
+   * are read back to tell the two apart.
+   */
+  async function deleteTeam(row: RosterRow) {
+    if (!supabase) return;
+    const typed = window.prompt(
+      `Delete team ${row.team_code} (${row.team_name}) and its ${row.members.length} competitor(s) for good? Their waivers go too. This cannot be undone.\n\nType ${row.team_code} to confirm.`,
+    );
+    if (typed === null) return;
+    if (typed.trim() !== row.team_code) {
+      setError(`Not deleted: you typed "${typed}", not ${row.team_code}.`);
+      return;
+    }
+    setDeleting(row.id);
+    const { data, error: deleteError } = await supabase.from('teams').delete().eq('id', row.id).select('id');
+    setDeleting(null);
+    if (deleteError) {
+      setError(readErrorMessage(deleteError, 'Could not delete that team.'));
+      return;
+    }
+    if (!data?.length) {
+      setError('Only admins can delete teams. Ask an admin, or set its status to cancelled instead.');
+      return;
+    }
+    setExpanded(null);
+    setRows((current) => current.filter((other) => other.id !== row.id));
+    flash(`Deleted team ${row.team_code} (${row.team_name}).`);
+  }
+
+  /** Removes one competitor from a team (a duplicate or a joke entry). */
+  async function removeMember(row: RosterRow, member: RosterMember) {
+    if (!supabase || !member.waiver_token) return;
+    if (!window.confirm(`Remove ${member.competitor_id} ${member.full_name} from team ${row.team_code}? Their waiver goes too. This cannot be undone.`)) {
+      return;
+    }
+    const { data, error: removeError } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('waiver_token', member.waiver_token)
+      .select('waiver_token');
+    if (removeError || !data?.length) {
+      setError(readErrorMessage(removeError, 'Could not remove that competitor.'));
+      return;
+    }
+    flash(`Removed ${member.competitor_id} ${member.full_name}.`);
+    void load();
+  }
+
   async function toggleRegistration() {
     if (!supabase || !settings) return;
     const next = !settings.registration_open;
@@ -787,6 +846,47 @@ function Dashboard({ session }: { session: Session }) {
       ),
     [filtered],
   );
+
+  /**
+   * One reminder per parent or guardian still to sign, per team: their link
+   * covers every competitor on that team who named the same email.
+   */
+  const reminderTargets = useMemo(() => {
+    const seen = new Map<string, RosterMember>();
+    for (const row of filtered.filter(isLive)) {
+      for (const member of row.members) {
+        if (member.waiver_signed_at || !member.waiver_token || !member.guardian_email) continue;
+        const key = `${row.id}|${member.guardian_email.trim().toLowerCase()}`;
+        if (!seen.has(key)) seen.set(key, member);
+      }
+    }
+    return [...seen.values()];
+  }, [filtered]);
+
+  async function sendAllReminders() {
+    const targets = reminderTargets;
+    if (targets.length === 0) return;
+    if (
+      !window.confirm(
+        `Email a waiver reminder to ${targets.length} parent(s) or guardian(s) who have not signed yet, for the teams in view?\n\nEach gets their private signing link again. Mind your email service's daily limit (AgentMail's free plan sends 100 a day).`,
+      )
+    ) {
+      return;
+    }
+    const failed: string[] = [];
+    for (const [index, member] of targets.entries()) {
+      setReminding(`${index + 1}/${targets.length}`);
+      const result = await resendWaiverLink(member.waiver_token!);
+      if (!result.sent) failed.push(`${member.competitor_id} (${result.message})`);
+    }
+    setReminding(null);
+    const sent = targets.length - failed.length;
+    if (failed.length) {
+      setError(`Sent ${sent} of ${targets.length} reminders. Not sent: ${failed.join('; ')}`);
+    } else {
+      flash(`Sent ${sent} waiver reminder${sent === 1 ? '' : 's'}.`);
+    }
+  }
 
   const waiverTotals = useMemo(() => {
     const live = rows.filter(isLive);
@@ -990,6 +1090,15 @@ function Dashboard({ session }: { session: Session }) {
           </button>
           <button
             type="button"
+            className="btn btn--kelp"
+            disabled={reminding !== null || reminderTargets.length === 0}
+            onClick={() => void sendAllReminders()}
+            title="Emails each parent or guardian who has not signed their private signing link again"
+          >
+            {reminding ? `Sending reminders… ${reminding}` : `Email waiver reminders (${reminderTargets.length})`}
+          </button>
+          <button
+            type="button"
             className="btn"
             onClick={() =>
               void copy(
@@ -1113,325 +1222,336 @@ function Dashboard({ session }: { session: Session }) {
           <div>
             <p className="notice__title">Nothing here yet</p>
             <p className="notice__body">
-              No teams match this filter. Once registration opens on October 24 they will appear
-              here as they come in.
+              No teams match this filter. New registrations appear here as they come in.
             </p>
           </div>
         </div>
       ) : (
-        <div className="table-scroll">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Team</th>
-                <th>Division</th>
-                <th>Competitors</th>
-                <th>Waivers</th>
-                <th>School</th>
-                <th>Contact</th>
-                <th>Status</th>
-                <th>Donation</th>
-                <th>Registered</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => (
-                <Fragment key={row.id}>
-                  <tr
+        <ul className="team-list">
+          {filtered.map((row) => {
+            const open = expanded === row.id;
+            const counts = waiverCounts(row);
+            return (
+              <li
+                key={row.id}
+                className={`team-card ${open ? 'team-card--open' : ''} ${isLive(row) ? '' : 'team-card--cancelled'}`}
+              >
+                <div className="team-card__head">
+                  <button
+                    type="button"
+                    className="team-card__toggle"
+                    aria-expanded={open}
                     onClick={() => {
-                      setExpanded(expanded === row.id ? null : row.id);
+                      setExpanded(open ? null : row.id);
                       setMergeTarget('');
                       setEmailedFor(null);
                     }}
-                    className="staff__row"
                   >
-                    <td className="mono">{row.team_code}</td>
-                    <td>
-                      <strong>{row.team_name}</strong>
-                      {row.merged_into_code && (
-                        <span className="badge badge--muted staff__tag">→ team {row.merged_into_code}</span>
-                      )}
-                      {isLive(row) && row.open_to_merge && row.members.length < SLOT_CAP && (
-                        <span className="badge staff__tag">open to combine</span>
-                      )}
-                    </td>
-                    <td>{divisionLabel(row.division)}</td>
-                    <td className="mono">
-                      {row.members.map((member) => member.competitor_id).join(' ') || '—'}
-                    </td>
-                    <td>
-                      {row.members.length === 0 ? (
-                        '—'
-                      ) : (
-                        <span
-                          className={`badge ${waiverCounts(row).signed === row.members.length ? 'badge--kelp' : 'badge--sub'}`}
-                        >
-                          {waiverCounts(row).signed}/{row.members.length}
-                        </span>
-                      )}
-                    </td>
-                    <td>{row.school ?? '—'}</td>
-                    <td>
-                      {row.contact_name ?? '—'}
-                      <br />
-                      <small>{row.contact_email}</small>
-                    </td>
-                    <td>
-                      <select
-                        className="select select--inline"
-                        value={row.status}
-                        onClick={(event) => event.stopPropagation()}
-                        onChange={(event) => void updateStatus(row.id, event.target.value)}
-                      >
-                        {STATUSES.map((status) => (
-                          <option value={status} key={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <span className="staff__pledge">{pledgeLabel(row)}</span>
-                      <label className="checkbox staff__received" onClick={(event) => event.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={row.donation_received}
-                          onChange={(event) => void setReceived(row.id, event.target.checked)}
-                        />
-                        <span>Received</span>
-                      </label>
-                    </td>
-                    <td className="mono">{new Date(row.created_at).toLocaleDateString()}</td>
-                  </tr>
-                  {expanded === row.id && (
-                    <tr className="staff__detail">
-                      <td colSpan={10}>
-                        <div className="staff__detail-grid">
-                          <div>
-                            <h4 className="dive__subhead">Roster</h4>
-                            <ul className="id-list">
-                              {row.members.map((member) => (
-                                <li className="id-list__row staff__member" key={member.competitor_id}>
-                                  <span className="id-list__id pixel">{member.competitor_id}</span>
-                                  <span className="id-list__name">
-                                    {member.full_name}
-                                    {(member.grade || member.email || member.original_team_code) && (
-                                      <small>
-                                        {[
-                                          member.grade && `Grade ${member.grade}`,
-                                          member.email,
-                                          member.original_team_code &&
-                                            `moved from team ${member.original_team_code}`,
-                                        ]
-                                          .filter(Boolean)
-                                          .join(' · ')}
-                                      </small>
-                                    )}
-                                    <small className="staff__guardian">
-                                      Parent or guardian: {member.guardian_name ?? '—'}
-                                      {member.guardian_email ? ` · ${member.guardian_email}` : ''}
-                                    </small>
-                                    <small
-                                      className={`staff__waiver ${member.waiver_signed_at ? 'staff__waiver--ok' : 'staff__waiver--todo'}`}
+                    <span className="team-card__code pixel">{row.team_code}</span>
+                    <span className="team-card__title">
+                      <strong className="team-card__name">{row.team_name}</strong>
+                      <span className="team-card__sub">
+                        {divisionLabel(row.division)} · {row.school || 'No school given'} · registered{' '}
+                        {new Date(row.created_at).toLocaleDateString()}
+                      </span>
+                    </span>
+                    <span className="team-card__more label">{open ? 'Hide' : 'Details'}</span>
+                  </button>
+                  <select
+                    className="select select--inline team-card__status"
+                    aria-label={`Status of team ${row.team_code}`}
+                    value={row.status}
+                    onChange={(event) => void updateStatus(row.id, event.target.value)}
+                  >
+                    {STATUSES.map((status) => (
+                      <option value={status} key={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="team-card__meta">
+                  <span className="team-card__ids mono">
+                    {row.members.map((member) => member.competitor_id).join(' ') || 'No competitors'}
+                  </span>
+                  {row.members.length > 0 && (
+                    <span
+                      className={`badge ${counts.signed === row.members.length ? 'badge--kelp' : 'badge--sub'}`}
+                      title="Waivers signed"
+                    >
+                      Waivers {counts.signed}/{row.members.length}
+                    </span>
+                  )}
+                  {row.merged_into_code && (
+                    <span className="badge badge--muted staff__tag">→ team {row.merged_into_code}</span>
+                  )}
+                  {isLive(row) && row.open_to_merge && row.members.length < SLOT_CAP && (
+                    <span className="badge staff__tag">open to combine</span>
+                  )}
+                  <span className="team-card__contact">
+                    {row.contact_name ?? '—'} ·{' '}
+                    <a href={`mailto:${row.contact_email}`}>{row.contact_email}</a>
+                  </span>
+                  <span className="team-card__give">
+                    <span className="staff__pledge">{pledgeLabel(row)}</span>
+                    <label className="checkbox staff__received">
+                      <input
+                        type="checkbox"
+                        checked={row.donation_received}
+                        onChange={(event) => void setReceived(row.id, event.target.checked)}
+                      />
+                      <span>Received</span>
+                    </label>
+                  </span>
+                </div>
+                {open && (
+                  <div className="team-card__detail">
+                    <div className="staff__detail-grid">
+                      <div>
+                        <h4 className="dive__subhead">Roster</h4>
+                        <ul className="id-list">
+                          {row.members.map((member) => (
+                            <li className="id-list__row staff__member" key={member.competitor_id}>
+                              <span className="id-list__id pixel">{member.competitor_id}</span>
+                              <span className="id-list__name">
+                                {member.full_name}
+                                {(member.grade || member.email || member.original_team_code) && (
+                                  <small>
+                                    {[
+                                      member.grade && `Grade ${member.grade}`,
+                                      member.email,
+                                      member.original_team_code &&
+                                        `moved from team ${member.original_team_code}`,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </small>
+                                )}
+                                <small className="staff__guardian">
+                                  Parent or guardian: {member.guardian_name ?? '—'}
+                                  {member.guardian_email ? ` · ${member.guardian_email}` : ''}
+                                </small>
+                                <small
+                                  className={`staff__waiver ${member.waiver_signed_at ? 'staff__waiver--ok' : 'staff__waiver--todo'}`}
+                                >
+                                  {member.waiver_signed_at
+                                    ? signedLabel(member)
+                                    : member.waiver_token
+                                      ? 'Waiver not signed yet'
+                                      : 'Waiver signing not set up — re-run supabase/schema.sql'}
+                                </small>
+                              </span>
+                              {member.waiver_token && (
+                                <span className="staff__member-actions">
+                                  {member.waiver_signed_at && (
+                                    <button
+                                      type="button"
+                                      className="btn btn--sm"
+                                      disabled={waiverBusy === `pdf:${member.competitor_id}`}
+                                      onClick={() => void waiverPdf(member)}
                                     >
-                                      {member.waiver_signed_at
-                                        ? signedLabel(member)
-                                        : member.waiver_token
-                                          ? 'Waiver not signed yet'
-                                          : 'Waiver signing not set up — re-run supabase/schema.sql'}
-                                    </small>
-                                  </span>
-                                  {member.waiver_token && (
-                                    <span className="staff__member-actions">
-                                      {member.waiver_signed_at && (
-                                        <button
-                                          type="button"
-                                          className="btn btn--sm"
-                                          disabled={waiverBusy === `pdf:${member.competitor_id}`}
-                                          onClick={() => void waiverPdf(member)}
-                                        >
-                                          {waiverBusy === `pdf:${member.competitor_id}` ? 'Preparing…' : 'PDF'}
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        className="btn btn--sm"
-                                        onClick={() =>
-                                          void copy('signing link', [waiverSigningLink(member.waiver_token!)])
-                                        }
-                                        title="The parent or guardian's private link. Anyone with it can sign, so only send it to them."
-                                      >
-                                        Copy link
-                                      </button>
-                                      {!member.waiver_signed_at && member.guardian_email && (
-                                        <button
-                                          type="button"
-                                          className="btn btn--sm"
-                                          disabled={waiverBusy === `mail:${member.competitor_id}`}
-                                          onClick={() => void resendWaiver(member)}
-                                        >
-                                          {waiverBusy === `mail:${member.competitor_id}` ? 'Sending…' : 'Email link'}
-                                        </button>
-                                      )}
-                                      {!member.waiver_signed_at && isLive(row) && (
-                                        <button
-                                          type="button"
-                                          className="btn btn--sm"
-                                          aria-expanded={emailedFor === member.competitor_id}
-                                          onClick={() =>
-                                            setEmailedFor(emailedFor === member.competitor_id ? null : member.competitor_id)
-                                          }
-                                          title="They emailed us their agreement instead of signing online"
-                                        >
-                                          Got it by email
-                                        </button>
-                                      )}
-                                    </span>
+                                      {waiverBusy === `pdf:${member.competitor_id}` ? 'Preparing…' : 'PDF'}
+                                    </button>
                                   )}
-                                  {emailedFor === member.competitor_id && member.waiver_token && (
-                                    <EmailedWaiverForm
-                                      member={member}
-                                      onCancel={() => setEmailedFor(null)}
-                                      onDone={(message) => {
-                                        setEmailedFor(null);
-                                        flash(message);
-                                        void load();
-                                      }}
-                                    />
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                            {isLive(row) && row.members.length > 0 && row.members.length < SLOT_CAP && (
-                              <MergeBox
-                                row={row}
-                                rows={rows}
-                                target={mergeTarget}
-                                onTarget={setMergeTarget}
-                                busy={merging}
-                                onMerge={(into) => void mergeInto(row, into)}
-                              />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="dive__subhead">Details</h4>
-                            <dl className="facts">
-                              <div className="facts__row">
-                                <dt>Location</dt>
-                                <dd>
-                                  {[row.city, row.state_region, row.country]
-                                    .filter(Boolean)
-                                    .join(', ') || '—'}
-                                </dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Coach</dt>
-                                <dd>{row.coach_name ?? '—'}</dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Phone</dt>
-                                <dd>{row.contact_phone ?? '—'}</dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Notes</dt>
-                                <dd>{row.notes ?? '—'}</dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Media release</dt>
-                                <dd>
-                                  {row.media_release && row.media_release_signed_by
-                                    ? `Signed by ${row.media_release_signed_by}${
-                                        row.media_release_signed_at
-                                          ? `, ${new Date(row.media_release_signed_at).toLocaleDateString()}`
-                                          : ''
-                                      }`
-                                    : 'Not signed'}
-                                </dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Liability waivers</dt>
-                                <dd>
-                                  {waiverCounts(row).signed} of {row.members.length} signed by a
-                                  parent or guardian
-                                  {row.liability_waiver && row.liability_waiver_signed_by
-                                    ? `. Captain ${row.liability_waiver_signed_by} acknowledged${
-                                        row.liability_waiver_signed_at
-                                          ? `, ${new Date(row.liability_waiver_signed_at).toLocaleDateString()}`
-                                          : ''
-                                      }`
-                                    : ''}
-                                </dd>
-                              </div>
-                              {row.merged_into_code && (
-                                <div className="facts__row">
-                                  <dt>Combined</dt>
-                                  <dd>
-                                    Into team {row.merged_into_code}. Its competitors are listed
-                                    there now.
-                                  </dd>
-                                </div>
-                              )}
-                              {isLive(row) && row.members.length < SLOT_CAP && (
-                                <div className="facts__row">
-                                  <dt>Combining</dt>
-                                  <dd>{row.open_to_merge ? 'Open to being combined' : 'Did not ask to be combined'}</dd>
-                                </div>
-                              )}
-                              {row.staff_notes && (
-                                <div className="facts__row">
-                                  <dt>Staff notes</dt>
-                                  <dd className="staff__notes">{row.staff_notes}</dd>
-                                </div>
-                              )}
-                              <div className="facts__row">
-                                <dt>Donation</dt>
-                                <dd>
-                                  {pledgeLabel(row)}
-                                  {row.donation_received ? ' — received' : ''}
-                                </dd>
-                              </div>
-                              <div className="facts__row">
-                                <dt>Confirmation</dt>
-                                <dd>
-                                  {row.confirmation_sent_at
-                                    ? `Emailed ${new Date(row.confirmation_sent_at).toLocaleString()}`
-                                    : 'Not sent'}{' '}
                                   <button
                                     type="button"
                                     className="btn btn--sm"
-                                    disabled={sending === row.id}
-                                    onClick={() => void resendConfirmation(row)}
+                                    onClick={() =>
+                                      void copy('signing link', [waiverSigningLink(member.waiver_token!)])
+                                    }
+                                    title="The parent or guardian's private link. Anyone with it can sign, so only send it to them."
                                   >
-                                    {sending === row.id
-                                      ? 'Sending…'
-                                      : row.confirmation_sent_at
-                                        ? 'Resend'
-                                        : 'Send now'}
+                                    Copy link
                                   </button>
-                                </dd>
-                              </div>
-                              {row.division === 'online' && (
-                                <div className="facts__row">
-                                  <dt>Distance rule</dt>
-                                  <dd>
-                                    {row.distance_attested
-                                      ? 'Attested: no member within 100 mi of the Bay Area'
-                                      : 'Not attested'}
-                                  </dd>
-                                </div>
+                                  {!member.waiver_signed_at && member.guardian_email && (
+                                    <button
+                                      type="button"
+                                      className="btn btn--sm"
+                                      disabled={waiverBusy === `mail:${member.competitor_id}`}
+                                      onClick={() => void resendWaiver(member)}
+                                    >
+                                      {waiverBusy === `mail:${member.competitor_id}` ? 'Sending…' : 'Email link'}
+                                    </button>
+                                  )}
+                                  {!member.waiver_signed_at && isLive(row) && (
+                                    <button
+                                      type="button"
+                                      className="btn btn--sm"
+                                      aria-expanded={emailedFor === member.competitor_id}
+                                      onClick={() =>
+                                        setEmailedFor(emailedFor === member.competitor_id ? null : member.competitor_id)
+                                      }
+                                      title="They emailed us their agreement instead of signing online"
+                                    >
+                                      Got it by email
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="btn btn--sm staff__danger"
+                                    onClick={() => void removeMember(row, member)}
+                                    title="Remove this competitor from the team"
+                                  >
+                                    Remove
+                                  </button>
+                                </span>
                               )}
-                            </dl>
+                              {emailedFor === member.competitor_id && member.waiver_token && (
+                                <EmailedWaiverForm
+                                  member={member}
+                                  onCancel={() => setEmailedFor(null)}
+                                  onDone={(message) => {
+                                    setEmailedFor(null);
+                                    flash(message);
+                                    void load();
+                                  }}
+                                />
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        {isLive(row) && row.members.length > 0 && row.members.length < SLOT_CAP && (
+                          <MergeBox
+                            row={row}
+                            rows={rows}
+                            target={mergeTarget}
+                            onTarget={setMergeTarget}
+                            busy={merging}
+                            onMerge={(into) => void mergeInto(row, into)}
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="dive__subhead">Details</h4>
+                        <dl className="facts">
+                          <div className="facts__row">
+                            <dt>Location</dt>
+                            <dd>
+                              {[row.city, row.state_region, row.country]
+                                .filter(Boolean)
+                                .join(', ') || '—'}
+                            </dd>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                          <div className="facts__row">
+                            <dt>Coach</dt>
+                            <dd>{row.coach_name ?? '—'}</dd>
+                          </div>
+                          <div className="facts__row">
+                            <dt>Phone</dt>
+                            <dd>{row.contact_phone ?? '—'}</dd>
+                          </div>
+                          <div className="facts__row">
+                            <dt>Notes</dt>
+                            <dd>{row.notes ?? '—'}</dd>
+                          </div>
+                          <div className="facts__row">
+                            <dt>Media release</dt>
+                            <dd>
+                              {row.media_release && row.media_release_signed_by
+                                ? `Signed by ${row.media_release_signed_by}${
+                                    row.media_release_signed_at
+                                      ? `, ${new Date(row.media_release_signed_at).toLocaleDateString()}`
+                                      : ''
+                                  }`
+                                : 'Not signed'}
+                            </dd>
+                          </div>
+                          <div className="facts__row">
+                            <dt>Liability waivers</dt>
+                            <dd>
+                              {waiverCounts(row).signed} of {row.members.length} signed by a
+                              parent or guardian
+                              {row.liability_waiver && row.liability_waiver_signed_by
+                                ? `. Captain ${row.liability_waiver_signed_by} acknowledged${
+                                    row.liability_waiver_signed_at
+                                      ? `, ${new Date(row.liability_waiver_signed_at).toLocaleDateString()}`
+                                      : ''
+                                  }`
+                                : ''}
+                            </dd>
+                          </div>
+                          {row.merged_into_code && (
+                            <div className="facts__row">
+                              <dt>Combined</dt>
+                              <dd>
+                                Into team {row.merged_into_code}. Its competitors are listed
+                                there now.
+                              </dd>
+                            </div>
+                          )}
+                          {isLive(row) && row.members.length < SLOT_CAP && (
+                            <div className="facts__row">
+                              <dt>Combining</dt>
+                              <dd>{row.open_to_merge ? 'Open to being combined' : 'Did not ask to be combined'}</dd>
+                            </div>
+                          )}
+                          {row.staff_notes && (
+                            <div className="facts__row">
+                              <dt>Staff notes</dt>
+                              <dd className="staff__notes">{row.staff_notes}</dd>
+                            </div>
+                          )}
+                          <div className="facts__row">
+                            <dt>Donation</dt>
+                            <dd>
+                              {pledgeLabel(row)}
+                              {row.donation_received ? ' — received' : ''}
+                            </dd>
+                          </div>
+                          <div className="facts__row">
+                            <dt>Confirmation</dt>
+                            <dd>
+                              {row.confirmation_sent_at
+                                ? `Emailed ${new Date(row.confirmation_sent_at).toLocaleString()}`
+                                : 'Not sent'}{' '}
+                              <button
+                                type="button"
+                                className="btn btn--sm"
+                                disabled={sending === row.id}
+                                onClick={() => void resendConfirmation(row)}
+                              >
+                                {sending === row.id
+                                  ? 'Sending…'
+                                  : row.confirmation_sent_at
+                                    ? 'Resend'
+                                    : 'Send now'}
+                              </button>
+                            </dd>
+                          </div>
+                          {row.division === 'online' && (
+                            <div className="facts__row">
+                              <dt>Distance rule</dt>
+                              <dd>
+                                {row.distance_attested
+                                  ? 'Attested: no member within 100 mi of the Bay Area'
+                                  : 'Not attested'}
+                              </dd>
+                            </div>
+                          )}
+                        </dl>
+                      <div className="staff__danger-zone">
+                        <button
+                          type="button"
+                          className="btn btn--sm staff__danger"
+                          disabled={!isAdmin || deleting === row.id}
+                          onClick={() => void deleteTeam(row)}
+                        >
+                          {deleting === row.id ? 'Deleting…' : 'Delete team'}
+                        </button>
+                        <p className="field__hint">
+                          {isAdmin
+                            ? 'Removes the team and its competitors for good. To keep a record instead, set its status to cancelled.'
+                            : 'Only admins can delete a team. To take it out of the count, set its status to cancelled.'}
+                        </p>
+                      </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

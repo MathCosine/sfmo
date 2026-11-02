@@ -227,13 +227,19 @@ export async function recordEmailedWaiver(
   return { emailed: await emailSignedWaiver(token) };
 }
 
-/** Staff only: email a parent or guardian their signing link again. */
-export async function resendWaiverLink(token: string): Promise<{ sent: boolean; message: string }> {
+/**
+ * Staff only: email the signing link again, to the parent or guardian, or to
+ * the competitor themself (worded for them: pass it on, or sign if 18+).
+ */
+export async function resendWaiverLink(
+  token: string,
+  to: 'guardian' | 'student' = 'guardian',
+): Promise<{ sent: boolean; message: string; to?: string }> {
   const client = requireSupabase();
   const { data, error } = await client.functions.invoke('send-confirmation', {
-    body: { resend_waiver: token },
+    body: { resend_waiver: token, ...(to === 'student' ? { to } : {}) },
   });
-  if (!error && data?.sent) return { sent: true, message: `Sent the signing link to ${data.to}.` };
+  if (!error && data?.sent) return { sent: true, message: `Sent the signing link to ${data.to}.`, to: data.to };
   return { sent: false, message: await functionError(error, data, 'Could not send the link.') };
 }
 

@@ -16,6 +16,7 @@
 //   { waiver_pdf: token }     returns a signed PDF (the page's Download link),
 //                             or a marked sample for the test email's link;
 //   { resend_waiver: token }  staff only: emails the signing link again;
+//                             add to: 'student' to send it to the competitor;
 //   { merge_notice: code }    staff only: tells both teams they were combined;
 //   { test: true }            staff only: sample copies of the emails to you.
 //
@@ -267,6 +268,64 @@ export function emailFallback(competitors: string[]) {
     statement: `I, [your full legal name], am the parent or legal guardian of ${names}. I have read the SFMO 2027 liability waiver at ${site()}waiver and I agree to it on their behalf.`,
     after: 'A competitor who is 18 or older can write the same for themself. We will record it and email you the signed copy.',
   };
+}
+
+/**
+ * Staff only: the same link, sent to the competitor themself, for when their
+ * parent or guardian has not signed (often because that address is wrong).
+ * It names the address we used, so they can spot a typo and reply with the
+ * right one. A competitor who is 18 or older can sign it themself.
+ */
+export function waiverStudentEmail(
+  team: { team_code: string; team_name: string },
+  student: { competitor_id: string; full_name: string; email: string },
+  guardian: { name: string | null; email: string | null },
+  token: string,
+) {
+  const link = waiverLink(token);
+  const who = guardian.email
+    ? `your parent or guardian${guardian.name ? `, ${guardian.name},` : ''} at ${guardian.email.trim()}`
+    : 'your parent or guardian';
+  const subject = `Your SFMO 2027 waiver still needs a parent's signature`;
+  const intro = `You are registered for the San Francisco Math Open 2027 (${EVENT_DATE}) on team ${team.team_code}, ${team.team_name}, as ${student.competitor_id}. Your liability waiver has not been signed yet, and every competitor needs one before competition day.`;
+  const ask = `We emailed the signing link to ${who}, but it may not have reached them. Please pass this link on so they can sign it. It takes about two minutes:`;
+  const self = 'If you are 18 or older, you can sign it yourself at the same link.';
+  const wrong = guardian.email
+    ? 'Is that email address wrong? Reply with the right one and we will send the link there.'
+    : 'Reply with your parent or guardian’s email address and we will send the link to them too.';
+  const fallback = emailFallback([`${student.full_name} (${student.competitor_id})`]);
+  const fallbackIntro = 'Link not working? Your parent or guardian can email sfmathopen@gmail.com from their own address instead, and copy in:';
+  const text = [
+    `Hi ${student.full_name},`,
+    '',
+    intro,
+    '',
+    ask,
+    link,
+    '',
+    self,
+    '',
+    wrong,
+    '',
+    fallbackIntro,
+    '',
+    `  "${fallback.statement}"`,
+    '',
+    '— The San Francisco Math Initiative',
+  ].join('\n');
+  const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.55;color:#0a2b3f;max-width:560px">
+<p>Hi ${escapeHtml(student.full_name)},</p>
+<p>${escapeHtml(intro)}</p>
+<p>${escapeHtml(ask)}</p>
+${button(link, 'Open the waiver')}
+<p style="font-size:13px;color:#3d6377">Or copy this link: ${escapeHtml(link)}</p>
+<p>${escapeHtml(self)}</p>
+<p><strong>${escapeHtml(wrong)}</strong></p>
+<div style="margin:16px 0;padding:10px 14px;background:#fdf8ec;border-left:4px solid #f2b52c">
+<p style="margin:0 0 6px">${escapeHtml(fallbackIntro)}</p>
+<p style="margin:0;font-style:italic">“${escapeHtml(fallback.statement)}”</p></div>
+<p>— The San Francisco Math Initiative</p></div>`;
+  return { to: student.email.trim(), subject, text, html };
 }
 
 /** One "please sign" email per guardian address on the team. */
@@ -887,14 +946,48 @@ async function waiverPdfDownload(token: string, competitorId: string | null): Pr
   }
 }
 
-/** Staff: email a parent or guardian their signing link again. */
-async function resendWaiver(req: Request, token: string): Promise<Response> {
+/** The competitor a signing link belongs to, with their own email. */
+async function linkOwner(token: string) {
+  const res = await fetch(
+    `${env('SUPABASE_URL')}/rest/v1/team_members?waiver_token=eq.${token}&select=competitor_id,full_name,email,waiver_signed_at`,
+    { headers: serviceHeaders() },
+  );
+  if (!res.ok) throw new Error(`team_members lookup failed: ${res.status}`);
+  const rows = (await res.json()) as Array<{
+    competitor_id: string; full_name: string; email: string | null; waiver_signed_at: string | null;
+  }>;
+  return rows[0] ?? null;
+}
+
+/**
+ * Staff: email the signing link again — to the parent or guardian (the
+ * default), or to the competitor themself (to: 'student').
+ */
+async function resendWaiver(req: Request, token: string, to: 'guardian' | 'student'): Promise<Response> {
   let staff: string | null = null;
   try {
     staff = await staffEmail(req);
   } catch { /* not staff */ }
   if (!staff) return json(403, { sent: false, error: 'Only signed-in staff can resend waiver links.' });
   const record = await rpc<WaiverRecord | null>('waiver_record', { p_token: token }).catch(() => null);
+  if (to === 'student') {
+    const owner = record ? await linkOwner(token).catch(() => null) : null;
+    if (!record || !owner) return json(404, { sent: false, error: 'No competitor has that waiver link.' });
+    if (owner.waiver_signed_at) return json(409, { sent: false, error: `${owner.full_name}'s waiver is already signed.` });
+    if (!owner.email?.includes('@')) return json(404, { sent: false, error: `We have no email for ${owner.full_name}.` });
+    const message = waiverStudentEmail(
+      record,
+      { competitor_id: owner.competitor_id, full_name: owner.full_name, email: owner.email },
+      { name: record.guardian_name, email: record.guardian_email },
+      token,
+    );
+    try {
+      await deliver([message], env('REPLY_TO', 'sfmathopen@gmail.com'));
+    } catch (error) {
+      return json(502, { sent: false, error: String(error) });
+    }
+    return json(200, { sent: true, to: message.to });
+  }
   if (!record || !record.guardian_email) return json(404, { sent: false, error: 'No parent or guardian email for that competitor.' });
   const message = waiverRequestEmail(
     record,
@@ -1015,7 +1108,9 @@ export async function handle(req: Request): Promise<Response> {
   }
   if (body.resend_waiver !== undefined) {
     const t = token('resend_waiver');
-    return t ? resendWaiver(req, t) : json(400, { sent: false, error: 'Bad waiver link.' });
+    return t
+      ? resendWaiver(req, t, body.to === 'student' ? 'student' : 'guardian')
+      : json(400, { sent: false, error: 'Bad waiver link.' });
   }
   if (body.merge_notice !== undefined) {
     const code = String(body.merge_notice).trim();

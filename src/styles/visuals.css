@@ -1517,3 +1517,11 @@
 .staff__danger-zone .field__hint {
   flex: 1 1 14rem;
 }
+
+/* Reminder button with its "to whom" picker, kept together when tools wrap. */
+.staff__remind {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}

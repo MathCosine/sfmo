@@ -528,6 +528,7 @@ function Dashboard({ session }: { session: Session }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   /** Progress of "Email waiver reminders", e.g. "4/12". */
   const [reminding, setReminding] = useState<string | null>(null);
+  const [remindTo, setRemindTo] = useState<'guardian' | 'student' | 'both'>('guardian');
 
   useEffect(() => {
     void supabase?.rpc('is_admin').then(({ data }) => setIsAdmin(data === true));
@@ -690,16 +691,68 @@ function Dashboard({ session }: { session: Session }) {
     }
   }
 
-  async function resendWaiver(member: RosterMember) {
+  /**
+   * An older send-confirmation ignores "to: student" and emails the parent.
+   * Catch that rather than report the student as emailed.
+   */
+  const STALE_FUNCTION =
+    'That went to the parent, not the student: the email function in Supabase is out of date. Paste the new supabase/functions/send-confirmation/index.ts into the Supabase dashboard and deploy it.';
+  const wentToStudent = (member: RosterMember, sentTo?: string) =>
+    (sentTo ?? '').trim().toLowerCase() === (member.email ?? '').trim().toLowerCase();
+
+  async function resendWaiver(member: RosterMember, to: 'guardian' | 'student' = 'guardian') {
     if (!member.waiver_token) return;
-    if (!window.confirm(`Email ${member.guardian_email ?? 'the parent or guardian'} the waiver link for ${member.full_name} again?`)) {
+    const question =
+      to === 'student'
+        ? `Email ${member.full_name} at ${member.email} their waiver link?\n\nIt asks them to pass it to their parent or guardian (or sign it themself if 18 or older), and shows the parent email we have so they can tell us if it is wrong.`
+        : `Email ${member.guardian_email ?? 'the parent or guardian'} the waiver link for ${member.full_name} again?`;
+    if (!window.confirm(question)) return;
+    setWaiverBusy(`mail-${to}:${member.competitor_id}`);
+    const result = await resendWaiverLink(member.waiver_token, to);
+    setWaiverBusy(null);
+    if (result.sent && to === 'student' && !wentToStudent(member, result.to)) setError(STALE_FUNCTION);
+    else if (result.sent) flash(result.message);
+    else setError(`Could not send the waiver link: ${result.message}`);
+  }
+
+  /**
+   * Corrects a mistyped parent or guardian email, for every competitor on the
+   * team who still has a waiver to sign under the old address, then offers to
+   * send the link to the new one.
+   */
+  async function fixGuardianEmail(row: RosterRow, member: RosterMember) {
+    if (!supabase || !member.waiver_token) return;
+    const old = member.guardian_email?.trim() ?? '';
+    const typed = window.prompt(`The correct parent or guardian email for ${member.full_name}:`, old);
+    const next = typed?.trim() ?? '';
+    if (!next || next.toLowerCase() === old.toLowerCase()) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) {
+      setError(`"${next}" does not look like an email address. Nothing was changed.`);
       return;
     }
-    setWaiverBusy(`mail:${member.competitor_id}`);
+    const sameOld = (email: string | null) => Boolean(old) && (email ?? '').trim().toLowerCase() === old.toLowerCase();
+    const tokens = row.members
+      .filter((m) => m.waiver_token && !m.waiver_signed_at && (m.waiver_token === member.waiver_token || sameOld(m.guardian_email)))
+      .map((m) => m.waiver_token!);
+    const { data, error: updateError } = await supabase
+      .from('team_members')
+      .update({ guardian_email: next })
+      .in('waiver_token', tokens)
+      .select('waiver_token');
+    if (updateError || !data?.length) {
+      setError(readErrorMessage(updateError, 'Could not change that email.'));
+      return;
+    }
+    void load();
+    if (!window.confirm(`Saved: ${next}. Email the signing link there now?`)) {
+      flash(`Changed the parent or guardian email to ${next}.`);
+      return;
+    }
+    setWaiverBusy(`mail-guardian:${member.competitor_id}`);
     const result = await resendWaiverLink(member.waiver_token);
     setWaiverBusy(null);
-    if (result.sent) flash(result.message);
-    else setError(`Could not resend the waiver link: ${result.message}`);
+    if (result.sent) flash(`Changed the email and ${result.message.charAt(0).toLowerCase()}${result.message.slice(1)}`);
+    else setError(`Changed the email, but could not send the link: ${result.message}`);
   }
 
   /**
@@ -848,36 +901,59 @@ function Dashboard({ session }: { session: Session }) {
   );
 
   /**
-   * One reminder per parent or guardian still to sign, per team: their link
-   * covers every competitor on that team who named the same email.
+   * Reminders for waivers still to sign, in the teams in view. Parents: one
+   * per address per team, as their link covers every competitor on the team
+   * who named it. Students: one each, to their own email, skipped under
+   * "both" when it is the same address as their parent's.
    */
   const reminderTargets = useMemo(() => {
-    const seen = new Map<string, RosterMember>();
+    const jobs: Array<{ member: RosterMember; to: 'guardian' | 'student' }> = [];
+    const seen = new Set<string>();
     for (const row of filtered.filter(isLive)) {
       for (const member of row.members) {
-        if (member.waiver_signed_at || !member.waiver_token || !member.guardian_email) continue;
-        const key = `${row.id}|${member.guardian_email.trim().toLowerCase()}`;
-        if (!seen.has(key)) seen.set(key, member);
+        if (member.waiver_signed_at || !member.waiver_token) continue;
+        const guardian = member.guardian_email?.trim().toLowerCase() ?? '';
+        const own = member.email?.trim().toLowerCase() ?? '';
+        if (remindTo !== 'student' && guardian && !seen.has(`${row.id}|${guardian}`)) {
+          seen.add(`${row.id}|${guardian}`);
+          jobs.push({ member, to: 'guardian' });
+        }
+        if (remindTo !== 'guardian' && own.includes('@') && !(remindTo === 'both' && own === guardian)) {
+          jobs.push({ member, to: 'student' });
+        }
       }
     }
-    return [...seen.values()];
-  }, [filtered]);
+    return jobs;
+  }, [filtered, remindTo]);
 
   async function sendAllReminders() {
     const targets = reminderTargets;
     if (targets.length === 0) return;
+    const parents = targets.filter((job) => job.to === 'guardian').length;
+    const students = targets.length - parents;
+    const who = [
+      parents && `${parents} parent(s) or guardian(s)`,
+      students && `${students} student(s), asking them to pass it on`,
+    ]
+      .filter(Boolean)
+      .join(' and ');
     if (
       !window.confirm(
-        `Email a waiver reminder to ${targets.length} parent(s) or guardian(s) who have not signed yet, for the teams in view?\n\nEach gets their private signing link again. Mind your email service's daily limit (AgentMail's free plan sends 100 a day).`,
+        `Email the waiver link to ${who}, for waivers not signed yet in the teams in view?\n\nThat is ${targets.length} email(s). Mind your email service's daily limit (AgentMail's free plan sends 100 a day).`,
       )
     ) {
       return;
     }
     const failed: string[] = [];
-    for (const [index, member] of targets.entries()) {
+    for (const [index, { member, to }] of targets.entries()) {
       setReminding(`${index + 1}/${targets.length}`);
-      const result = await resendWaiverLink(member.waiver_token!);
-      if (!result.sent) failed.push(`${member.competitor_id} (${result.message})`);
+      const result = await resendWaiverLink(member.waiver_token!, to);
+      if (result.sent && to === 'student' && !wentToStudent(member, result.to)) {
+        setReminding(null);
+        setError(`Stopped after ${index + 1} of ${targets.length}. ${STALE_FUNCTION}`);
+        return;
+      }
+      if (!result.sent) failed.push(`${member.competitor_id} ${to === 'student' ? 'student' : 'parent'} (${result.message})`);
     }
     setReminding(null);
     const sent = targets.length - failed.length;
@@ -1088,15 +1164,28 @@ function Dashboard({ session }: { session: Session }) {
           >
             Copy unsigned-waiver emails ({unsignedGuardianEmails.length})
           </button>
-          <button
-            type="button"
-            className="btn btn--kelp"
-            disabled={reminding !== null || reminderTargets.length === 0}
-            onClick={() => void sendAllReminders()}
-            title="Emails each parent or guardian who has not signed their private signing link again"
-          >
-            {reminding ? `Sending reminders… ${reminding}` : `Email waiver reminders (${reminderTargets.length})`}
-          </button>
+          <span className="staff__remind">
+            <button
+              type="button"
+              className="btn btn--kelp"
+              disabled={reminding !== null || reminderTargets.length === 0}
+              onClick={() => void sendAllReminders()}
+              title="Emails the signing link again for every waiver not signed yet in the teams in view"
+            >
+              {reminding ? `Sending reminders… ${reminding}` : `Email waiver reminders (${reminderTargets.length})`}
+            </button>
+            <select
+              className="select select--inline"
+              aria-label="Send waiver reminders to"
+              value={remindTo}
+              disabled={reminding !== null}
+              onChange={(event) => setRemindTo(event.target.value as 'guardian' | 'student' | 'both')}
+            >
+              <option value="guardian">to parents</option>
+              <option value="student">to students</option>
+              <option value="both">to parents and students</option>
+            </select>
+          </span>
           <button
             type="button"
             className="btn"
@@ -1367,10 +1456,32 @@ function Dashboard({ session }: { session: Session }) {
                                     <button
                                       type="button"
                                       className="btn btn--sm"
-                                      disabled={waiverBusy === `mail:${member.competitor_id}`}
+                                      disabled={waiverBusy === `mail-guardian:${member.competitor_id}`}
                                       onClick={() => void resendWaiver(member)}
+                                      title="Email the signing link to the parent or guardian"
                                     >
-                                      {waiverBusy === `mail:${member.competitor_id}` ? 'Sending…' : 'Email link'}
+                                      {waiverBusy === `mail-guardian:${member.competitor_id}` ? 'Sending…' : 'Email parent'}
+                                    </button>
+                                  )}
+                                  {!member.waiver_signed_at && member.email?.includes('@') && (
+                                    <button
+                                      type="button"
+                                      className="btn btn--sm"
+                                      disabled={waiverBusy === `mail-student:${member.competitor_id}`}
+                                      onClick={() => void resendWaiver(member, 'student')}
+                                      title="Email the link to the competitor, to pass on to their parent (or sign if 18 or older)"
+                                    >
+                                      {waiverBusy === `mail-student:${member.competitor_id}` ? 'Sending…' : 'Email student'}
+                                    </button>
+                                  )}
+                                  {!member.waiver_signed_at && isLive(row) && (
+                                    <button
+                                      type="button"
+                                      className="btn btn--sm"
+                                      onClick={() => void fixGuardianEmail(row, member)}
+                                      title="Correct a mistyped parent or guardian email"
+                                    >
+                                      Fix parent email
                                     </button>
                                   )}
                                   {!member.waiver_signed_at && isLive(row) && (

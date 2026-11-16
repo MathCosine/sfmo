@@ -18,7 +18,7 @@ export const staff: StaffMember[] = [
     slug: 'thomas',
     name: 'Zi-Jie (Thomas) Ni',
     boardTitle: 'President',
-    roles: ['Executive & Strategy', 'Platform Engineering', '2026 AMC 10 Perfect Score'],
+    roles: ['Executive & Strategy', 'Platform Engineering'],
     isBoard: true,
     photoPosition: '50% 38%',
     bio: "Thomas Ni is a high schooler who has loved mathematics for a long time, and has earned recognition in math competitions along the way, including a perfect score on the 2026 AMC 10. He especially enjoys combinatorics problems. When he is not doing mathematics, you can find him playing basketball, pondering the world's big questions, consuming apples, reading a book, or talking with friends.",

@@ -12,7 +12,7 @@ export type StaffMember = {
   bio: string;
 };
 
-/** Board in org chart order; anyone with isBoard: false is listed as a contributor. */
+/** Board: President, Vice President, then org chart order. isBoard: false lists as a contributor. */
 export const staff: StaffMember[] = [
   {
     slug: 'thomas',
@@ -22,6 +22,15 @@ export const staff: StaffMember[] = [
     isBoard: true,
     photoPosition: '50% 38%',
     bio: "Thomas Ni is a high schooler who has loved mathematics for a long time, and has earned recognition in math competitions along the way, including a perfect score on the 2026 AMC 10. He especially enjoys combinatorics problems. When he is not doing mathematics, you can find him playing basketball, pondering the world's big questions, consuming apples, reading a book, or talking with friends.",
+  },
+  {
+    slug: 'seojin',
+    name: 'Seojin Lee',
+    boardTitle: 'Vice President',
+    roles: ['Event Logistics & Community Engagement'],
+    isBoard: true,
+    photoPosition: '50% 20%',
+    bio: 'Seojin Lee is a student at Cupertino High School whose passion for mathematics began in 7th grade, when he earned an Honor Roll distinction on the AMC 8. Since then, he has participated in numerous competitive math programs and contests, including the AMC 10/12, SMT, and BMT. He is especially recognized for his strong attention to detail and analytical thinking, often identifying flaws in solutions that others overlook. He finds his interest in Number Theory and Combinatorics.',
   },
   {
     slug: 'rylan',
@@ -76,15 +85,6 @@ export const staff: StaffMember[] = [
     isBoard: true,
     photoPosition: '50% 22%',
     bio: "Yakup Pala is a sophomore at Connecting Waters Charter School in the Bay Area. He believes C>N=A>G, and that olympiad is superior to computational. Outside of math, Yakup enjoys robotics, taekwondo, and competitive programming. If you see him, ask him which combo problem he's thinking about; there's always at least one.",
-  },
-  {
-    slug: 'seojin',
-    name: 'Seojin Lee',
-    boardTitle: 'Head of Events',
-    roles: ['Event Logistics & Community Engagement'],
-    isBoard: true,
-    photoPosition: '50% 20%',
-    bio: 'Seojin Lee is a freshman at Cupertino High School whose passion for mathematics began in 7th grade, when he earned an Honor Roll distinction on the AMC 8. Since then, he has participated in numerous competitive math programs and contests, including the AMC 10, SMT, and BMMT. He is especially recognized for his strong attention to detail and analytical thinking, often identifying flaws in solutions that others overlook.',
   },
   {
     slug: 'dylan',

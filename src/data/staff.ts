@@ -12,7 +12,7 @@ export type StaffMember = {
   bio: string;
 };
 
-/** Department heads, in the order of the org chart. */
+/** Department heads in org chart order, then contributors (isBoard: false). */
 export const staff: StaffMember[] = [
   {
     slug: 'thomas',
@@ -85,6 +85,15 @@ export const staff: StaffMember[] = [
     isBoard: true,
     photoPosition: '50% 20%',
     bio: 'Seojin Lee is a freshman at Cupertino High School whose passion for mathematics began in 7th grade, when he earned an Honor Roll distinction on the AMC 8. Since then, he has participated in numerous competitive math programs and contests, including the AMC 10, SMT, and BMMT. He is especially recognized for his strong attention to detail and analytical thinking, often identifying flaws in solutions that others overlook.',
+  },
+  {
+    slug: 'dylan',
+    name: 'Dylan Wang',
+    boardTitle: 'Problem Writer',
+    roles: ['Problem Writer', 'Test Organizer'],
+    isBoard: false,
+    photoPosition: '50% 30%',
+    bio: 'Dylan Wang is a USAJMO qualifier who writes problems for SFMI and helps organize its tests.',
   },
 ];
 

@@ -12,7 +12,7 @@ export type StaffMember = {
   bio: string;
 };
 
-/** Department heads in org chart order, then contributors (isBoard: false). */
+/** Board in org chart order; anyone with isBoard: false is listed as a contributor. */
 export const staff: StaffMember[] = [
   {
     slug: 'thomas',
@@ -89,11 +89,11 @@ export const staff: StaffMember[] = [
   {
     slug: 'dylan',
     name: 'Dylan Wang',
-    boardTitle: 'Problem Writer',
-    roles: ['Problem Writer', 'Test Organizer'],
-    isBoard: false,
+    boardTitle: 'Test Organizer Lead',
+    roles: ['Problem Writer'],
+    isBoard: true,
     photoPosition: '50% 30%',
-    bio: 'Dylan Wang is a USAJMO qualifier who writes problems for SFMI and helps organize its tests.',
+    bio: 'Dylan Wang is a USAJMO qualifier who leads the organizing of SFMI’s tests and writes problems for them.',
   },
 ];
 
